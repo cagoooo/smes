@@ -17,7 +17,7 @@ app.config.update(
   MAIL_PASSWORD=os.getenv('MAIL_PASSWORD')
 )
 
-if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
     raise ValueError("MAIL_USERNAME and MAIL_PASSWORD must be set in environment variables")
 
 mail = Mail(app)
