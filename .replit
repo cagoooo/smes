@@ -31,4 +31,4 @@ run = ["sh", "-c", "python main.py"]
 
 [[ports]]
 localPort = 8090
-externalPort = 80
+externalPort = 8090
