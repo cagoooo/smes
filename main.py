@@ -7,15 +7,18 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# 配置 Flask-Mail
+# Flask-Mail Configuration
 app.config.update(
   MAIL_SERVER='smtp.gmail.com',
   MAIL_PORT=587,
   MAIL_USE_TLS=True,
   MAIL_USE_SSL=False,
-  MAIL_USERNAME=os.environ['MAIL_USERNAME'],
-  MAIL_PASSWORD=os.environ['MAIL_PASSWORD']
+  MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
+  MAIL_PASSWORD=os.getenv('MAIL_PASSWORD')
 )
+
+if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+    raise ValueError("MAIL_USERNAME and MAIL_PASSWORD must be set in environment variables")
 
 mail = Mail(app)
 
