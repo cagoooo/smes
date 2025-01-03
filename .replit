@@ -27,7 +27,8 @@ requiredFiles = [".replit", "replit.nix", ".config", "venv"]
 
 [deployment]
 deploymentTarget = "gce"
-run = ["sh", "-c", "python main.py"]
+run = ["sh", "-c", "python3 main.py"]
+build = ["pip install -r requirements.txt"]
 
 [[ports]]
 localPort = 8090
