@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, jsonify, request
 from flask_mail import Mail, Message
 import openAiAPI
