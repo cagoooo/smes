@@ -1,3 +1,6 @@
+
+import os
+
 import openai
 
 def get_open_ai_api_chat_response(prompt):
