@@ -570,11 +570,11 @@
     $("#user-input").keydown(function(event) {
       if (event.keyCode === 13) {
         event.preventDefault();  // 這行程式碼將阻止 Enter 鍵導致的換行
-        return false;
         // 只有當輸入框不為空時才發送問題
         if ($("#user-input").val().trim() !== "") {
           sendQuestion();
         }
+        return false;
       }
     });
   </script>
