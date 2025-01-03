@@ -2,8 +2,7 @@ import openai
 
 def get_open_ai_api_chat_response(prompt):
     # 输入open api key
-    # openai.api_key = "你的api key"
-    openai.api_key = "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"
+    openai.api_key = os.environ['OPENAI_API_KEY']
 
     # 把用户输入的prompt拼装成像上面的示例文件
     user_prompt = {"role": "user", "content": prompt}
@@ -17,7 +16,7 @@ def get_open_ai_api_chat_response(prompt):
         model="gpt-4o-mini",
         messages=messages,
         stream=False, # 确保非串行模式
-        temperature=0.2  # 添加這行,設置較低的溫度值
+        temperature=0.5  # 添加這行,設置較低的溫度值
     )
 
     # 从响应中提取内容
