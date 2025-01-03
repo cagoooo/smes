@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, jsonify, request
 from flask_mail import Mail, Message
-import openAiAPI
+from openAiAPI import get_open_ai_api_chat_response
 import json
 from datetime import datetime, timedelta
 
@@ -50,7 +50,7 @@ def home():
   if request.method == "POST":
     prompt = request.form['prompt']
     result = {}
-    result['ai_answer'] = openAiAPI.get_open_ai_api_chat_response(prompt)
+    result['ai_answer'] = get_open_ai_api_chat_response(prompt)
     return jsonify(result)
   return render_template('home.html', **locals())
 
@@ -107,4 +107,4 @@ def save_conversation():
 
 
 if __name__ == '__main__':
-  app.run(host='0.0.0.0', port=8090, debug=False)
+  app.run(host='0.0.0.0', port=8080, debug=False)
