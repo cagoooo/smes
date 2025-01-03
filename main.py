@@ -13,8 +13,8 @@ app.config.update(
   MAIL_PORT=25,
   MAIL_USE_TLS=False,
   MAIL_USE_SSL=False,
-  MAIL_USERNAME=None,
-  MAIL_PASSWORD=None
+  MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
+  MAIL_PASSWORD=os.getenv('MAIL_PASSWORD')
 )
 
 if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
