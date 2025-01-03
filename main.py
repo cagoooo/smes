@@ -12,8 +12,8 @@ app.config.update(
   MAIL_PORT=587,
   MAIL_USE_TLS=True,
   MAIL_USE_SSL=False,
-  MAIL_USERNAME='210@mail2.smes.tyc.edu.tw',  # 輸入您的電子郵件
-  MAIL_PASSWORD='smes4711752'  # 輸入您的電子郵件密碼
+  MAIL_USERNAME=os.environ['MAIL_USERNAME'],
+  MAIL_PASSWORD=os.environ['MAIL_PASSWORD']
 )
 
 mail = Mail(app)
