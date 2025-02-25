@@ -26,7 +26,7 @@ language = "python3"
 requiredFiles = [".replit", "replit.nix", ".config", "venv"]
 
 [deployment]
-deploymentTarget = "gce"
+deploymentTarget = "cloudrun"
 run = ["sh", "-c", "python main.py"]
 
 [[ports]]
