@@ -188,5 +188,15 @@
         "user_question": "期中考考試時間",
         "ai_answer": "抱歉，我不清楚期中考的具體時間。您可以參考石門國小的行事曆以獲得更多相關資訊，網址為[行事曆](https://www.smes.tyc.edu.tw/modules/tad_cal/index.php)。如果有其他問題，也可以透過「石門小智鈴LINE客服」獲得協助，連結為[https://lin.ee/KtOVIev](https://lin.ee/KtOVIev)。",
         "timestamp": "2025-02-25T10:24:59.342000Z"
+    },
+    {
+        "user_question": "課照班",
+        "ai_answer": "課後照顧班的相關資訊如下：<br><br>- 課後照顧班的放學時間為下午5點30分，確保學生在放學後有安全的照顧和學習環境。<br>- 如果您想了解更詳細的課後照顧班信息或名單，您可以查閱113學年度課後照顧班抽籤名單，連結為：[課後照顧班抽籤名單](https://www.smes.tyc.edu.tw/modules/tadnews/index.php?nsn=4288)。<br><br>如果您還有其他問題或需要進一步的協助，歡迎詢問！另外，您也可以加入我們的「石門小智鈴LINE客服」，連結為：[https://lin.ee/KtOVIev](https://lin.ee/KtOVIev)。",
+        "timestamp": "2025-02-25T11:05:24.867000Z"
+    },
+    {
+        "user_question": "行事曆",
+        "ai_answer": "石門國小的行事曆詳細網址為：[石門國小行事曆](https://www.smes.tyc.edu.tw/modules/tad_cal/index.php)。請您查詢相關的活動及安排！如果還有其他問題，隨時可以詢問我哦！另外，也歡迎您加入「石門小智鈴LINE客服」，協助增好友曝光度：[石門小智鈴LINE客服](https://lin.ee/KtOVIev)。",
+        "timestamp": "2025-02-25T11:05:43.385000Z"
     }
 ]
