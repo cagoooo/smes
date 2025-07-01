@@ -77,6 +77,26 @@ def send_email_notification(user_question, ai_answer, timestamp):
   mail.send(msg)
 
 
+@app.route('/send_email_notification', methods=['POST'])
+def send_email_notification_route():
+  data = request.get_json()
+  
+  if data:
+    user_question = data.get('user_question')
+    ai_answer = data.get('ai_answer')
+    
+    if user_question and ai_answer:
+      # 使用當前時間
+      timestamp = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+      
+      try:
+        send_email_notification(user_question, ai_answer, timestamp)
+        return jsonify({"status": "success", "message": "Email sent"}), 200
+      except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+  
+  return jsonify({"status": "error", "message": "Invalid data"}), 400
+
 @app.route('/save_conversation', methods=['POST'])
 def save_conversation():
   data = request.get_json()
