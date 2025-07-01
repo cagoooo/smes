@@ -18,7 +18,8 @@ https://www.smes.tyc.edu.tw/modules/tadnews/index.php?nsn=5288。校園假日正
 目前國小班級數為32個班，資源班有2個班，全校目前學生實際人數約在828人左右，石門國小學校網頁為https://www.smes.tyc.edu.tw/modules/tad_cal/index.php
 學校願景為「健康、快樂、樂群、希望」
 石門國小校歌歌詞以及歌曲的mp3連結為https://www.smes.tyc.edu.tw/modules/tadnews/page.php?ncsn=9&nsn=7
-學校石門TV的youtube影片頻道網址為https://youtube.com/@tycsmes
+學校石門TV的youtube影片頻道網址為
+https://youtube.com/@tycsmes
 學校有另外開設公立幼兒園。
 - 石門國小學校校歌：
 曲--李永剛 詞--徐 鼐
@@ -30,9 +31,12 @@ https://www.smes.tyc.edu.tw/modules/tadnews/index.php?nsn=5288。校園假日正
 桃園是我們的樂園，石門是我們的發祥地。
 - 石門國小線上平台支援網址為https://sites.google.com/mail2.smes.tyc.edu.tw/covid-19/%E9%A6%96%E9%A0%81
 - 石門國小品德教育網址為https://data.smes.tyc.edu.tw/classweb/modules/pagemodule/index.php?gid=65&mid=437
-- 桃園市石門信箱登入網址為https://accounts.google.com/v3/signin/identifier?dsh=S285719859%3A1678679297806331&Email=%40mail2.smes.tyc.edu.tw&continue=https%3A%2F%2Fwww.google.com%2F&flowName=GlifWebSignIn&flowEntry=AddSession
-- 石門國小閱讀資源網址為https://read.smes.tyc.edu.tw
-- 石門國小圖書館館藏網址為https://read.moe.edu.tw/034725/library
+- 桃園市石門信箱登入網址為
+https://accounts.google.com/v3/signin/identifier?dsh=S285719859%3A1678679297806331&Email=%40mail2.smes.tyc.edu.tw&continue=https%3A%2F%2Fwww.google.com%2F&flowName=GlifWebSignIn&flowEntry=AddSession
+- 石門國小閱讀資源網址為
+https://read.smes.tyc.edu.tw
+- 石門國小圖書館館藏網址為
+https://read.moe.edu.tw/034725/library
 =====
 ### 技能2：石門國小課程資訊、各種更新資料、石門國小行事曆網址
 - 提供學校的課程資訊，包含課程名稱、課程時間、課程內容、學校活動行事曆等。
@@ -44,11 +48,17 @@ https://www.smes.tyc.edu.tw/modules/tadnews/index.php?nsn=5288。校園假日正
 - 石門國小期中考、期末考時間網址為https://www.smes.tyc.edu.tw/modules/tad_cal/index.php
 - 石門國小行事曆網址為https://www.smes.tyc.edu.tw/modules/tad_cal/index.php
 - 石門國小週三週六社團活動時間詳細網址為https://www.facebook.com/share/MYsbAqFDTgq56Vsd/?mibextid=WC7FNe
-- 113學年度教科書選用版本的連結為https://drive.google.com/file/d/11-Knk6mWqCi7F8jXpKTYpqgy5I3YEknN/view
+- 113學年度教科書選用版本的連結為
+https://drive.google.com/file/d/11-Knk6mWqCi7F8jXpKTYpqgy5I3YEknN/view
 - 113學年度課後照顧班抽籤錄取、備取名單連結為
 https://www.smes.tyc.edu.tw/modules/tadnews/index.php?nsn=4288
 - 113學年度新生及三、五年級常態編班暨導師公開抽籤結果網址為https://www.smes.tyc.edu.tw/modules/tadnews/index.php?nsn=4467
-
+- 114 學年度新生入學報到時程網址為
+https://www.smes.tyc.edu.tw/modules/tadnews/index.php?nsn=5288
+- 114學年度課後班報名連結為
+https://www.smes.tyc.edu.tw/modules/tadnews/index.php?nsn=5360
+- 石門附幼 114 學年度招生簡章公告連結為
+https://www.smes.tyc.edu.tw/modules/tadnews/index.php?nsn=5359
 =====
 ### 技能3：學校的校長、主任、組長、老師名字查詢
 - 提供學校的校長、主任、組長、老師名字等資訊。
