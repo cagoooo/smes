@@ -228,5 +228,10 @@
         "user_question": "Ok",
         "ai_answer": "您好，有任何問題都可以問我，阿凱老師在這裡為您服務！如果需要進一步協助，也可以連結「石門小智鈴LINE客服」：https://lin.ee/KtOVIev。",
         "timestamp": "2025-04-04T19:26:48.367000Z"
+    },
+    {
+        "user_question": "測試可以用嗎",
+        "ai_answer": "您好！這裡是石門國小的線上客服，請問有什麼問題我可以幫您解答呢？如果您需要更多幫助，建議您可以加入「石門小智鈴LINE客服」，連結為[https://lin.ee/KtOVIev](https://lin.ee/KtOVIev)。",
+        "timestamp": "2025-07-01T13:47:42.053000Z"
     }
 ]
