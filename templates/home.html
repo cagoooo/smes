@@ -319,6 +319,82 @@
         bottom: 8px;
       }
     }
+
+    /* 第二個懸浮廣告按鈕樣式 */
+    .floating-ad-btn-2 {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      padding: 15px 20px;
+      border-radius: 25px;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      z-index: 1001;
+      transition: all 0.3s ease;
+      text-align: center;
+      max-width: 180px;
+      min-width: 150px;
+      border: 3px solid #fff;
+      animation: glow 2s infinite alternate;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .floating-ad-btn-2:hover {
+      background: linear-gradient(135deg, #764ba2, #667eea);
+      color: #fff;
+      transform: scale(1.1);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+      text-decoration: none;
+    }
+
+    @keyframes glow {
+      0% {
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      }
+      100% {
+        box-shadow: 0 8px 30px rgba(102, 126, 234, 0.8);
+      }
+    }
+
+    /* RWD 響應式設計 - 第二個按鈕 */
+    @media (max-width: 768px) {
+      .floating-ad-btn-2 {
+        right: 10px;
+        bottom: 15px;
+        padding: 12px 15px;
+        font-size: 14px;
+        max-width: 140px;
+        min-width: 120px;
+        border-radius: 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .floating-ad-btn-2 {
+        right: 5px;
+        bottom: 10px;
+        padding: 10px 12px;
+        font-size: 12px;
+        max-width: 120px;
+        min-width: 100px;
+        border-radius: 18px;
+      }
+    }
+
+    /* 確保在小螢幕上不會遮擋主要內容 - 第二個按鈕 */
+    @media (max-width: 375px) {
+      .floating-ad-btn-2 {
+        font-size: 11px;
+        padding: 8px 10px;
+        max-width: 100px;
+        min-width: 90px;
+        bottom: 8px;
+      }
+    }
   </style>
 
   <script>
@@ -679,6 +755,11 @@
   <!-- 懸浮廣告按鈕 -->
   <a href="https://line.me/R/ti/p/@733oiboa?oat_content=url&ts=05120012" target="_blank" class="floating-ad-btn">
     點『石』成金🐝<br>(評語優化)
+  </a>
+
+  <!-- 第二個懸浮廣告按鈕 -->
+  <a href="https://document-ai-companion-ipad4.replit.app" target="_blank" class="floating-ad-btn-2">
+    創建專屬助手🦄
   </a>
 
   <!-- 更靠近頁底的LINE客服按鈕 -->
