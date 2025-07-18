@@ -121,9 +121,6 @@ def save_conversation():
       # 保存對話到文件
       save_conversations_to_file(conversations)
 
-      # 發送電子郵件通知
-      send_email_notification(user_question, ai_answer, adjusted_timestamp)
-
       return jsonify({
           "status": "success",
           "message": "Conversation saved"
