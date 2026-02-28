@@ -1,0 +1,16 @@
+.git
+.replit
+.breakpoints
+.config
+.local
+__pycache__
+venv
+*.pyc
+conversations.json
+.env
+poetry.lock
+Dockerfile
+.dockerignore
+.github
+README_USAGE.md
+PORTING_GUIDE.md

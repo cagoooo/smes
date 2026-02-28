@@ -1,0 +1,147 @@
+:root {
+  --primary-blue: #1a237e;
+  --bg-light-blue: #f0f8ff;
+  --chat-input-bg: #e3f2fd;
+  --ai-answer-bg: #e8f5e9;
+  --smes-gold: #ffc107;
+}
+
+body {
+  background-color: var(--bg-light-blue);
+  font-family: Arial, sans-serif;
+  padding-top: 140px;
+}
+
+.navbar {
+  background-color: var(--primary-blue) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.welcome-box {
+  font-weight: bold; 
+  color: darkblue; 
+  font-size: 18px; 
+  text-shadow: 1px 1px 2px gray; 
+  background-color: #90ee90; 
+  padding: 10px; 
+  border-radius: 10px;
+}
+
+.btn-send {
+  background-color: #ffcccc; 
+  color: black; 
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.top-buttons {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.9);
+  z-index: 1030;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  flex-wrap: wrap;
+}
+
+.top-button {
+  padding: 6px 12px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.top-button:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+  color: white;
+}
+
+.list-group-item {
+  background-color: #ffffff;
+  margin-bottom: 12px;
+  border-radius: 15px !important;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  border: none;
+}
+
+.answer-background {
+  background-color: var(--ai-answer-bg) !important;
+}
+
+#user-input {
+  resize: none;
+  overflow: hidden;
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.blink {
+  animation: blink 1s linear infinite;
+}
+
+@keyframes blink {
+  0% {opacity: 1;}
+  50% {opacity: 0.4;}
+  100% {opacity: 1;}
+}
+
+.green-text { color: green; }
+.black-text { color: #333; }
+
+/* 懸浮按鈕 */
+.floating-ad-btn, .floating-ad-btn-2 {
+  position: fixed;
+  z-index: 1040;
+  padding: 12px 18px;
+  border-radius: 25px;
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+  border: 2px solid white;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  transition: 0.3s;
+  font-size: 14px;
+}
+
+.floating-ad-btn {
+  left: 20px;
+  bottom: 20px;
+  background: linear-gradient(135deg, #ff9800, #ffc107);
+}
+
+.floating-ad-btn-2 {
+  right: 20px;
+  bottom: 100px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.line-service-btn {
+  background-color: #00c300;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0,195,0,0.3);
+  display: inline-flex;
+  align-items: center;
+}
+
+/* RWD */
+@media (max-width: 768px) {
+  body { padding-top: 200px; }
+  .top-buttons { gap: 5px; }
+  .top-button { font-size: 12px; }
+  .floating-ad-btn, .floating-ad-btn-2 { font-size: 12px; padding: 8px 12px; }
+}
