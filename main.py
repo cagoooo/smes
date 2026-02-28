@@ -1,29 +1,14 @@
 import os
 from flask import Flask, render_template, jsonify, request
-from flask_mail import Mail, Message
-from openAiAPI import get_open_ai_api_chat_response
+from line_notify import send_line_notification
+from gemini_api import get_gemini_reponse
 import json
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# Flask-Mail Configuration
-app.config.update(MAIL_SERVER='smtp.gmail.com',
-                  MAIL_PORT=587,
-                  MAIL_USE_TLS=True,
-                  MAIL_USE_SSL=False,
-                  MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
-                  MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'))
-
-if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
-  raise ValueError(
-      "MAIL_USERNAME and MAIL_PASSWORD must be set in environment variables")
-
-mail = Mail(app)
-
 # 儲存問題和答案的列表
 conversations = []
-
 
 def load_conversations_from_file():
   try:
@@ -53,32 +38,14 @@ def home():
   if request.method == "POST":
     prompt = request.form['prompt']
     result = {}
-    result['ai_answer'] = get_open_ai_api_chat_response(prompt)
+    result['ai_answer'] = get_gemini_reponse(prompt)
     return jsonify(result)
   return render_template('home.html', **locals())
 
 
-def send_email_notification(user_question, ai_answer, timestamp):
-  dt = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
-
-  formatted_time = f"{dt.year}年{dt.month}月{dt.day}日  {dt.hour}點{dt.minute}分{dt.second}秒"
-
-  msg = Message("AI智能客服問答紀錄",
-                sender="210@mail2.smes.tyc.edu.tw",
-                recipients=["210@mail2.smes.tyc.edu.tw"])
-  msg.html = f"""
-<div style="font-size: 18px; color: red;"><b>提問：</b></div><br>
-{user_question}<br><br>
-<div style="font-size: 18px; color: red;"><b>回答：</b></div><br>
-{ai_answer}<br><br>
-<div style="font-size: 18px; color: red;"><b>時間：</b></div><br>
-{formatted_time}"""
-
-  mail.send(msg)
-
-
 @app.route('/send_email_notification', methods=['POST'])
-def send_email_notification_route():
+def send_notification_route():
+  # 雖然路徑維持 /send_email_notification (為了不修改前端 JS)，但內部改為 LINE 通知
   data = request.get_json()
   
   if data:
@@ -86,12 +53,9 @@ def send_email_notification_route():
     ai_answer = data.get('ai_answer')
     
     if user_question and ai_answer:
-      # 使用當前時間
-      timestamp = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-      
       try:
-        send_email_notification(user_question, ai_answer, timestamp)
-        return jsonify({"status": "success", "message": "Email sent"}), 200
+        send_line_notification(user_question, ai_answer)
+        return jsonify({"status": "success", "message": "LINE notification sent"}), 200
       except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
   
