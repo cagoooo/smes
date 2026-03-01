@@ -208,6 +208,74 @@
             font-family: monospace;
         }
 
+        /* ── 圖表區 ── */
+        .chart-row {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            position: relative;
+        }
+
+        .chart-card h4 {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            margin: 0 0 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── 匯出按鈕 ── */
+        .btn-export {
+            background: rgba(52, 211, 153, 0.15);
+            border: 1px solid rgba(52, 211, 153, 0.35);
+            color: #34d399;
+            border-radius: 50px;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-export:hover {
+            background: rgba(52, 211, 153, 0.3);
+        }
+
+        /* ── 卡片刪除按鈕 ── */
+        .chat-delete-btn {
+            background: none;
+            border: none;
+            color: rgba(244, 63, 94, 0.3);
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            line-height: 1;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .chat-delete-btn:hover {
+            color: #f43f5e;
+            background: rgba(244, 63, 94, 0.12);
+        }
+
         /* ── 統計卡片 ── */
         .stat-grid {
             display: grid;
@@ -1161,7 +1229,9 @@
             }
         }
     </style>
-  <script type="module" crossorigin src="./assets/admin-tBp-mO7c.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script type="module" crossorigin src="./assets/admin-Wwe2mZbv.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/index.esm2017-F-JNOIJ7.js">
 </head>
 
@@ -1241,6 +1311,15 @@
                     <input id="search-input" placeholder="搜尋使用者或關鍵字…" />
                 </div>
                 <div class="record-count-badge" id="record-count">0 筆記錄</div>
+                <button id="export-csv-btn" class="btn-export" title="匯出 CSV">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    匯出 CSV
+                </button>
             </div>
             <div id="records-content">
                 <div class="loading">
