@@ -81,10 +81,27 @@ exports.askGemini = onCall(
         const key = geminiApiKey.value().trim();
         if (!key) throw new HttpsError('internal', 'API Key 未設定。');
 
+        // ── 動態讀取 AI 設定 ──
+        let aiModel = 'gemini-2.5-flash-lite';
+        let aiTemperature = 0.7;
+        let aiMaxTokens = 1024;
+        try {
+            const aiSnap = await db.doc('config/aiSettings').get();
+            if (aiSnap.exists) {
+                const d = aiSnap.data();
+                if (d.model) aiModel = d.model;
+                if (typeof d.temperature === 'number') aiTemperature = d.temperature;
+                if (typeof d.maxTokens === 'number') aiMaxTokens = d.maxTokens;
+            }
+        } catch (aiErr) {
+            console.warn('讀取 AI 設定失敗，使用預設值:', aiErr.message);
+        }
+
         const genAI = new GoogleGenerativeAI(key);
         const model = genAI.getGenerativeModel({
-            model: 'gemini-2.5-flash-lite',
+            model: aiModel,
             systemInstruction: '你是由阿凱老師設計的桃園市石門國小資訊組 AI 客服「石門小智鈴」。請根據提供的知識庫內容，友善、專業地回答使用者的問題。如果問題不在知識庫中，請禮貌地告知並引導至相關單位。',
+            generationConfig: { temperature: aiTemperature, maxOutputTokens: aiMaxTokens },
         });
 
         const fullPrompt = `知識庫：\n${safeKnowledge}\n\n使用者問題：${safePrompt}`;
@@ -477,5 +494,41 @@ exports.notifyLineOnNewChat = onDocumentUpdated(
         }
 
         return null;
+    }
+);
+
+// ─── getAiSettings：讀取 AI 模型設定 ────────────────────────────────────────
+exports.getAiSettings = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        await checkAdmin(request);
+        const snap = await db.doc('config/aiSettings').get();
+        if (snap.exists) return snap.data();
+        // 預設值
+        return { model: 'gemini-2.5-flash-lite', temperature: 0.7, maxTokens: 1024 };
+    }
+);
+
+// ─── setAiSettings：更新 AI 模型設定 ────────────────────────────────────────
+exports.setAiSettings = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        await checkAdmin(request);
+        const { model, temperature, maxTokens } = request.data;
+        const VALID_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro'];
+        if (!VALID_MODELS.includes(model)) throw new HttpsError('invalid-argument', '無效的模型名稱。');
+        if (typeof temperature !== 'number' || temperature < 0 || temperature > 2) {
+            throw new HttpsError('invalid-argument', 'temperature 必須介於 0～2。');
+        }
+        if (typeof maxTokens !== 'number' || maxTokens < 256 || maxTokens > 8192) {
+            throw new HttpsError('invalid-argument', 'maxTokens 必須介於 256～8192。');
+        }
+        await db.doc('config/aiSettings').set({
+            model, temperature, maxTokens,
+            updatedAt: new Date().toISOString(),
+            updatedBy: request.auth.token.email || request.auth.uid,
+        });
+        console.log(`✅ AI 設定已更新：model=${model} temp=${temperature} maxTokens=${maxTokens}`);
+        return { ok: true };
     }
 );

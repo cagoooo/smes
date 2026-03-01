@@ -6,6 +6,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="./logo.png" type="image/x-icon">
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="小智鈴">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="./style.css">
@@ -164,5 +172,79 @@
     </script>
     <script type="module" src="./main.js"></script>
 </body>
+
+<!-- PWA: Service Worker + Install Banner + Offline Toast -->
+<div id="pwa-install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9000;
+    background:linear-gradient(135deg,#4f46e5,#0ea5e9);color:#fff;padding:14px 20px;
+    display:none;align-items:center;justify-content:space-between;gap:12px;font-family:sans-serif;">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <img src="/icons/icon-192.png" width="36" height="36" style="border-radius:8px">
+        <div>
+            <div style="font-weight:700;font-size:14px">安裝石門小智鈴 App</div>
+            <div style="font-size:12px;opacity:0.85">新增到主畫面，離線也能使用</div>
+        </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+        <button id="pwa-install-btn" style="background:#fff;color:#4f46e5;border:none;border-radius:20px;
+            padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer">安裝</button>
+        <button id="pwa-dismiss-btn" style="background:rgba(255,255,255,0.2);color:#fff;border:none;
+            border-radius:20px;padding:8px 12px;font-size:13px;cursor:pointer">✕</button>
+    </div>
+</div>
+
+<div id="offline-toast" style="display:none;position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9100;
+    background:#1e1040;border:1px solid rgba(239,68,68,0.4);color:#fca5a5;
+    padding:10px 20px;border-radius:20px;font-size:13px;font-family:sans-serif;
+    box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+    ⚠️ 您目前處於離線狀態，部分功能可能無法使用
+</div>
+
+<script>
+    (function () {
+        // ── Service Worker 註冊（僅正式環境）──
+        if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
+                    console.log('[SW] 已註冊', reg.scope);
+                }).catch(err => console.warn('[SW] 註冊失敗', err));
+            });
+        } else if ('serviceWorker' in navigator && location.hostname === 'localhost') {
+            // 開發環境：解除舊的 SW
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(r => r.unregister());
+            });
+        }
+
+        // ── PWA Install Banner ──
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner) { banner.style.display = 'flex'; }
+        });
+        document.getElementById('pwa-install-btn')?.addEventListener('click', () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(() => {
+                deferredPrompt = null;
+                document.getElementById('pwa-install-banner').style.display = 'none';
+            });
+        });
+        document.getElementById('pwa-dismiss-btn')?.addEventListener('click', () => {
+            document.getElementById('pwa-install-banner').style.display = 'none';
+        });
+
+        // ── 離線狀態 Toast ──
+        function showOfflineToast(show) {
+            const el = document.getElementById('offline-toast');
+            if (!el) return;
+            el.style.display = show ? 'block' : 'none';
+        }
+        window.addEventListener('offline', () => showOfflineToast(true));
+        window.addEventListener('online', () => showOfflineToast(false));
+        if (!navigator.onLine) showOfflineToast(true);
+    })();
+</script>
 
 </html>

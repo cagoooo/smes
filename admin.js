@@ -19,15 +19,17 @@ const auth = getAuth(app);
 const fns = getFunctions(app, 'asia-northeast1');
 
 // ── Cloud Functions ────────────────────────────────────────────
-const getAdminStatsFn          = httpsCallable(fns, 'getAdminStats');
-const getKnowledgeBaseFn       = httpsCallable(fns, 'getKnowledgeBase');
-const updateKnowledgeBaseFn    = httpsCallable(fns, 'updateKnowledgeBase');
-const setAdminFn               = httpsCallable(fns, 'setAdmin');
-const deleteUserChatFn         = httpsCallable(fns, 'deleteUserChat');
-const getKnowledgeHistoryFn    = httpsCallable(fns, 'getKnowledgeHistory');
+const getAdminStatsFn = httpsCallable(fns, 'getAdminStats');
+const getKnowledgeBaseFn = httpsCallable(fns, 'getKnowledgeBase');
+const updateKnowledgeBaseFn = httpsCallable(fns, 'updateKnowledgeBase');
+const setAdminFn = httpsCallable(fns, 'setAdmin');
+const deleteUserChatFn = httpsCallable(fns, 'deleteUserChat');
+const getKnowledgeHistoryFn = httpsCallable(fns, 'getKnowledgeHistory');
 const restoreKnowledgeVersionFn = httpsCallable(fns, 'restoreKnowledgeVersion');
-const getAlertKeywordsFn       = httpsCallable(fns, 'getAlertKeywords');
-const setAlertKeywordsFn       = httpsCallable(fns, 'setAlertKeywords');
+const getAlertKeywordsFn = httpsCallable(fns, 'getAlertKeywords');
+const setAlertKeywordsFn = httpsCallable(fns, 'setAlertKeywords');
+const getAiSettingsFn = httpsCallable(fns, 'getAiSettings');
+const setAiSettingsFn = httpsCallable(fns, 'setAiSettings');
 
 // ── State ──────────────────────────────────────────────────────
 let statsCache = null;
@@ -679,8 +681,94 @@ document.addEventListener('click', async e => {
         if (input && kw) { input.value = ''; renderAlertTags(); }
     }
     if (e.target.id === 'alert-save-btn') saveAlertKeywords();
+
+    // AI 設定頁
+    if (navItem?.dataset?.page === 'ai') setTimeout(loadAiSettings, 100);
+    if (e.target.id === 'ai-save-btn') saveAiSettings();
+    if (e.target.id === 'ai-test-btn') runAiTest();
 });
 document.addEventListener('keydown', e => {
     if (e.target.id === 'alert-input' && e.key === 'Enter')
         document.getElementById('alert-add-btn')?.click();
+});
+
+// ── AI 設定：讀取、儲存、即時測試 ───────────────────────────────────────────
+async function loadAiSettings() {
+    const container = document.getElementById('ai-settings-form');
+    if (!container) return;
+    container.style.opacity = '0.5';
+    try {
+        const { data } = await getAiSettingsFn();
+        const modelEl = document.getElementById('ai-model');
+        const tempEl = document.getElementById('ai-temp');
+        const tempValEl = document.getElementById('ai-temp-val');
+        const tokensEl = document.getElementById('ai-max-tokens');
+        if (modelEl) modelEl.value = data.model || 'gemini-2.5-flash-lite';
+        if (tempEl) {
+            tempEl.value = data.temperature ?? 0.7;
+            if (tempValEl) tempValEl.textContent = (data.temperature ?? 0.7).toFixed(2);
+        }
+        if (tokensEl) tokensEl.value = data.maxTokens || 1024;
+    } catch (e) {
+        console.warn('讀取 AI 設定失敗', e.message);
+    } finally {
+        container.style.opacity = '1';
+    }
+}
+
+async function saveAiSettings() {
+    const msgEl = document.getElementById('ai-save-msg');
+    const model = document.getElementById('ai-model')?.value;
+    const temperature = parseFloat(document.getElementById('ai-temp')?.value || '0.7');
+    const maxTokens = parseInt(document.getElementById('ai-max-tokens')?.value || '1024', 10);
+    if (msgEl) { msgEl.textContent = '⏳ 儲存中…'; msgEl.style.color = 'var(--muted)'; }
+    try {
+        await setAiSettingsFn({ model, temperature, maxTokens });
+        if (msgEl) { msgEl.textContent = '✅ 已儲存，下次問答即生效'; msgEl.style.color = '#34d399'; }
+        setTimeout(() => { if (msgEl) msgEl.textContent = ''; }, 4000);
+    } catch (err) {
+        if (msgEl) { msgEl.textContent = '❌ ' + err.message; msgEl.style.color = '#f43f5e'; }
+    }
+}
+
+async function runAiTest() {
+    const inputEl = document.getElementById('ai-test-input');
+    const outputEl = document.getElementById('ai-test-output');
+    const btnEl = document.getElementById('ai-test-btn');
+    const q = inputEl?.value?.trim();
+    if (!q) { if (outputEl) outputEl.textContent = '請輸入測試問題。'; return; }
+    if (outputEl) outputEl.textContent = '⏳ AI 回應中…';
+    if (btnEl) btnEl.disabled = true;
+    try {
+        // 引入前端的 askGemini callable（smes-e1dc3 project）
+        const { getFunctions: getFns2, httpsCallable: hc2 } = await import('firebase/functions');
+        const { initializeApp: initApp2, getApps } = await import('firebase/app');
+        const appName = 'test-preview';
+        let testApp = getApps().find(a => a.name === appName);
+        if (!testApp) {
+            testApp = initApp2({
+                apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+                authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+                projectId: 'smes-e1dc3',
+                appId: import.meta.env.VITE_FIREBASE_APP_ID,
+            }, appName);
+        }
+        const testFns = getFns2(testApp, 'asia-northeast1');
+        const testFn = hc2(testFns, 'askGemini');
+        const { data } = await testFn({ prompt: q, knowledge: '' });
+        if (outputEl) outputEl.textContent = data.text || '（無回應）';
+    } catch (err) {
+        if (outputEl) outputEl.textContent = '❌ ' + (err.message || '呼叫失敗');
+    } finally {
+        if (btnEl) btnEl.disabled = false;
+    }
+}
+
+// 溫度滑桿即時顯示數值
+document.addEventListener('input', e => {
+    if (e.target.id === 'ai-temp') {
+        const val = parseFloat(e.target.value).toFixed(2);
+        const el = document.getElementById('ai-temp-val');
+        if (el) el.textContent = val;
+    }
 });
