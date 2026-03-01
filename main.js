@@ -214,6 +214,8 @@ function addMessageToUI(userQuestion, aiAnswer, isNew = true, convTime = null) {
       </div>
     </div>`;
 
+    const chatList = getChatList();
+    if (!chatList) return aiReplyId;
     chatList.insertAdjacentHTML('afterbegin', aiHtml);
     chatList.insertAdjacentHTML('afterbegin', userHtml);
 
