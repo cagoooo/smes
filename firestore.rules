@@ -1,8 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // 使用者只能讀寫「自己的」對話記錄
+    match /chats/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // 知識庫：所有登入者可讀（AI 客服需要），只有後端 Function 可寫（write: false）
+    match /knowledge/{doc} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // 管理員設定：只允許後端 Function 讀寫（前端完全禁止）
+    match /config/{doc} {
+      allow read, write: if false;
+    }
+
+    // 使用量統計：只能讀寫自己的
+    match /usage/{uid}/{rest=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
   }
 }
