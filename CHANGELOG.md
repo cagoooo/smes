@@ -2,6 +2,52 @@
 
 ---
 
+## v3.2.1 — 2026-03-01｜RWD 全面優化 + 圖表高度修正
+
+### 📐 RWD 優化
+- **圖表欄**：桌面版 `1fr : 360px`，< 900px 折一欄，響應更自然
+- **Sidebar 手機版**：< 480px 時 Sidebar 改為底部 Tab Bar，顯示 emoji + 文字標籤
+- **平板 (< 768px)**：Sidebar 縮為 60px icon 列、h2 縮小、settings/kb-tips 改為單欄佈局
+- **Toolbar**：搜尋列在小螢幕改為全寬換行
+
+### 🐛 Bug 修正
+- **修正 Chart.js 圖表無限往下擴展**：給 `.chart-card` 設定固定 `height: 280px` + `overflow: hidden`，根本解決循環擴展問題
+
+---
+
+## v3.2.0 — 2026-03-01｜四大新功能上線
+
+### ✨ 新增功能
+- **🗑️ 刪除單筆對話記錄**：每張卡片右上角垃圾桶按鈕 → 後端 `deleteUserChat` Function（checkAdmin 保護）→ Firestore 即時刪除並更新 UI
+- **📊 Chart.js 統計圖表**：使用統計頁新增折線圖（近 7 天問答趨勢）與甜甜圈圖（登入用戶 vs 訪客比例）
+- **📤 匯出 CSV**：對話記錄工具列「匯出 CSV」按鈕，含 BOM（Excel 不亂碼），欄位：時間、使用者、Email、問題、AI 回答
+- **⏱️ Rate Limit 顯示**：每次問答後右下角顯示「💬 今日剩餘 N/20 次」，≤5 次時轉紅色警告，4 秒淡出
+
+### 🔧 後端更新
+- `getAdminStats` 新增回傳：`dailyTrend`（7日）、`anonCount`、`authCount`
+- 新增 `deleteUserChat` Cloud Function
+
+---
+
+## v3.1.1 — 2026-03-01｜管理員後台 Bug 修正
+
+### 🐛 Bug 修正
+- **搜尋 null crash**：`c.userName/c.userEmail` 加 `|| ''` 防護，修復訪客記錄搜尋崩潰
+- **搜尋範圍擴大**：新增搜尋 AI 回答內容
+
+### ✨ UX 強化
+- **統計打新整理按鈕**：標題旁 🔄 按鈕，點擊重新載入資料，同時顯示最後更新時間
+- **知識庫 Dirty 提示**：有未儲存修改時切換頁面彈出確認 Modal
+- **知識庫儲存高亮**：有修改時儲存按鈕顯示金色光暈
+- **登出確認 Modal**：取代直接登出，改為彈出確認對話框
+
+### 🔐 安全強化
+- **隱藏式管理員入口**：主頁 Footer「阿凱老師」後方加入半透明 🛡️ emoji 連結（透明度 0.08，hover 顯現）
+- **Firestore 安全規則重寫**：`chats/{uid}` 只允許本人讀寫、`config/` 前端完全禁止、`knowledge/` 禁止前端寫入
+- **返回首頁連結**：登入畫面與 sidebar 底部加入「← 返回首頁」
+
+---
+
 ## v3.1.0 — 2026-03-01｜管理員後台修復與 UI 全面升級
 
 ### 🐛 Bug 修正
