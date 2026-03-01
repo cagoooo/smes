@@ -9,8 +9,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <title>桃園市石門國小資訊組客服部</title>
-  <script type="module" crossorigin src="./assets/index-TQnnF9mi.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-B96e-aqT.css">
+  <script type="module" crossorigin src="./assets/index-B9apDemi.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DM6nqm1o.css">
 </head>
 
 <body>
@@ -130,6 +130,21 @@
             <div class="mt-3 text-muted fw-bold">
                 Designed by <a href="https://www.smes.tyc.edu.tw/modules/tadnews/page.php?ncsn=11&nsn=16#a5"
                     target="_blank" class="text-primary text-decoration-none">阿凱老師</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ 自訂確認 Modal（取代原生 browser confirm dialog） ═══ -->
+    <div id="custom-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="custom-modal-card">
+            <div class="modal-icon-wrap">
+                <span id="modal-icon">🔔</span>
+            </div>
+            <h3 id="modal-title" class="modal-title">確認操作</h3>
+            <p id="modal-message" class="modal-message">確定要執行此操作嗎？</p>
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="modal-btn modal-btn-cancel">✖ 取消</button>
+                <button id="modal-confirm-btn" class="modal-btn modal-btn-confirm">✔ 確定</button>
             </div>
         </div>
     </div>
