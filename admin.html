@@ -229,6 +229,13 @@
             border-radius: 16px;
             padding: 18px 20px;
             position: relative;
+            /* Chart.js 需要 parent 有固定高度 */
+            height: 280px;
+            overflow: hidden;
+        }
+
+        .chart-card canvas {
+            max-height: 210px;
         }
 
         .chart-card h4 {
