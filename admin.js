@@ -4,6 +4,7 @@ import {
     signInWithPopup, signOut, onAuthStateChanged
 } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 // ── Firebase 設定 ──────────────────────────────────────────────
 const firebaseConfig = {
@@ -17,6 +18,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const fns = getFunctions(app, 'asia-northeast1');
+
+// ── Firebase App Check（reCAPTCHA v3）──
+const recaptchaKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+if (recaptchaKey && location.hostname !== 'localhost') {
+    initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(recaptchaKey),
+        isTokenAutoRefreshEnabled: true,
+    });
+}
 
 // ── Cloud Functions ────────────────────────────────────────────
 const getAdminStatsFn = httpsCallable(fns, 'getAdminStats');
