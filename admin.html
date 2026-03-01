@@ -211,7 +211,7 @@
         /* ── 圖表區 ── */
         .chart-row {
             display: grid;
-            grid-template-columns: 1fr 300px;
+            grid-template-columns: 1fr 360px;
             gap: 16px;
             margin-bottom: 24px;
         }
@@ -464,7 +464,13 @@
             background: linear-gradient(90deg, #38bdf8, #818cf8);
         }
 
-        /* RWD */
+        /* RWD ── 小屏幕 ── */
+        @media (max-width: 900px) {
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 768px) {
             .stat-grid {
                 grid-template-columns: 1fr 1fr;
@@ -473,6 +479,10 @@
             .keyword-name {
                 width: 80px;
             }
+
+            .kb-tips {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 480px) {
@@ -480,7 +490,6 @@
                 grid-template-columns: 1fr;
             }
         }
-
 
         /* ── 對話記錄搜尋列 ── */
         .records-toolbar {
@@ -1207,15 +1216,17 @@
             }
         }
 
-        /* ── RWD ── */
+        /* ── 全局 RWD ── */
+
+        /* Tablet (768px) */
         @media (max-width: 768px) {
-            #sidebar {
-                width: 60px;
-                padding: 16px 8px;
+            :root {
+                --sidebar-w: 60px;
             }
 
-            .nav-item span {
-                display: none;
+            #sidebar {
+                width: 60px;
+                padding: 14px 6px;
             }
 
             .sidebar-logo,
@@ -1223,15 +1234,146 @@
                 display: none;
             }
 
+            .nav-item {
+                justify-content: center;
+                padding: 10px;
+            }
+
+            .nav-item span {
+                display: none;
+            }
+
+            /* 小屏幕 sidebar 底部連結文字隱藏 */
+            .sidebar-bottom a[href='./index.html'] span,
+            #logout-link span {
+                display: none;
+            }
+
             #main {
                 margin-left: 60px;
-                padding: 16px;
+                padding: 16px 12px;
+            }
+
+            h2 {
+                font-size: 18px;
+                margin-bottom: 16px;
+            }
+
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .setting-card.full {
+                grid-column: auto;
+            }
+
+            .settings-hero {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .hero-badge {
+                margin-left: 0;
+            }
+
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* 記錄 toolbar */
+            .records-toolbar {
+                flex-wrap: wrap;
+            }
+
+            .search-wrap {
+                min-width: 0;
+                width: 100%;
+            }
+
+            /* kb-tips */
+            .kb-tips {
+                grid-template-columns: 1fr;
+            }
+
+            /* 入欄 row */
+            .input-row {
+                flex-direction: column;
+            }
+
+            .admin-input {
+                width: 100%;
+            }
+        }
+
+        /* Mobile (480px) */
+        @media (max-width: 480px) {
+            #sidebar {
+                width: 100%;
+                height: 56px;
+                flex-direction: row;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                padding: 0 8px;
+                border-right: none;
+                border-top: 1px solid var(--border);
+                justify-content: space-around;
+                align-items: center;
+                z-index: 100;
+            }
+
+            .sidebar-logo,
+            #admin-email,
+            .sidebar-bottom {
+                display: none !important;
+            }
+
+            .nav-item {
+                flex-direction: column;
+                font-size: 10px;
+                padding: 6px 10px;
+                gap: 2px;
+            }
+
+            .nav-item span {
+                display: block;
+                font-size: 10px;
+            }
+
+            #main {
+                margin-left: 0;
+                margin-bottom: 56px;
+                padding: 12px 10px;
+            }
+
+            h2 {
+                font-size: 16px;
+            }
+
+            .chat-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .record-count-badge {
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+
+            .btn-export {
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+
+            /* 知識庫編輯器高度在手機縮小 */
+            #kb-editor {
+                height: 40vh;
+                font-size: 12px;
             }
         }
     </style>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <script type="module" crossorigin src="./assets/admin-Wwe2mZbv.js"></script>
+  <script type="module" crossorigin src="./assets/admin-DSLtktSq.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/index.esm2017-F-JNOIJ7.js">
 </head>
 
@@ -1276,7 +1418,7 @@
 
         <!-- 使用統計 -->
         <div id="page-stats" class="page active">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
                 <h2 style="margin:0">📊 使用統計</h2>
                 <button id="stats-refresh-btn" title="重新載入統計" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);
                            color:#a5b4fc;border-radius:50px;padding:6px 14px;font-size:12px;
