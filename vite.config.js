@@ -6,7 +6,10 @@ export default defineConfig({
         outDir: 'dist',
         chunkSizeWarningLimit: 2000,
         rollupOptions: {
-            input: './index.html',
+            input: {
+                main: './index.html',
+                admin: './admin.html',
+            },
         }
     }
 })

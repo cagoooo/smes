@@ -277,11 +277,21 @@ async function askGemini(prompt, retries = 3) {
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
             const result = await askGeminiFn({ prompt, knowledge: knowledgeBase });
+            // 顯示今日使用量
+            if (result.data?.usedCount !== undefined) {
+                updateUsageUI(result.data.usedCount, result.data.dailyLimit);
+            }
             return result.data.text;
         } catch (error) {
             const code = error?.code || '';
             const msg = String(error?.message || '');
-            const isRetryable = code === 'functions/unavailable' || code === 'functions/resource-exhausted'
+
+            // Rate Limit 超量 → 不重試，直接回傳訊息
+            if (code === 'functions/resource-exhausted' && msg.includes('上限')) {
+                return `⛔ ${msg}`;
+            }
+
+            const isRetryable = code === 'functions/unavailable'
                 || msg.includes('503') || msg.includes('429');
             if (isRetryable && attempt < retries) {
                 const wait = Math.pow(2, attempt) * 1000;
@@ -296,6 +306,31 @@ async function askGemini(prompt, retries = 3) {
             }
         }
     }
+}
+
+// 顯示今日使用量（右下角小徽章）
+function updateUsageUI(used, limit) {
+    let badge = document.getElementById('usage-badge');
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'usage-badge';
+        badge.style.cssText = `
+            position: fixed; bottom: 16px; right: 16px; z-index: 9000;
+            background: rgba(79,70,229,0.88); color: #fff;
+            border-radius: 50px; padding: 4px 12px; font-size: 12px;
+            font-weight: 700; backdrop-filter: blur(8px);
+            box-shadow: 0 4px 14px rgba(79,70,229,0.4);
+            transition: opacity 0.3s;
+        `;
+        document.body.appendChild(badge);
+    }
+    const remaining = limit - used;
+    badge.textContent = `💬 今日剩餘 ${remaining}/${limit} 次`;
+    badge.style.opacity = '1';
+    if (remaining <= 5) badge.style.background = 'rgba(244,63,94,0.88)';
+    // 3 秒後淡出
+    clearTimeout(badge._timer);
+    badge._timer = setTimeout(() => { badge.style.opacity = '0'; }, 4000);
 }
 
 async function handleSend() {

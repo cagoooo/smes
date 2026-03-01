@@ -3,7 +3,11 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const { defineSecret } = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const admin = require('firebase-admin');
 const axios = require('axios');
+
+admin.initializeApp();
+const db = admin.firestore();
 
 // 定義 GCP Secret Manager 中的 Secrets
 const lineChannelAccessToken = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
@@ -22,6 +26,26 @@ exports.askGemini = onCall(
         if (!request.auth) {
             throw new HttpsError('unauthenticated', '請先登入才能使用 AI 客服。');
         }
+
+        const uid = request.auth.uid;
+        const DAILY_LIMIT = 20;
+
+        // ── Rate Limiting：每人每日 20 次 ──
+        const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' }).replace(/\//g, '-');
+        const usageRef = db.doc(`usage/${uid}/daily/${today}`);
+
+        let usedCount = 0;
+        await db.runTransaction(async (tx) => {
+            const snap = await tx.get(usageRef);
+            usedCount = snap.exists ? (snap.data().count || 0) : 0;
+            if (usedCount >= DAILY_LIMIT) {
+                throw new HttpsError(
+                    'resource-exhausted',
+                    `今日提問次數已達上限（${DAILY_LIMIT}次），明天再來唔～`
+                );
+            }
+            tx.set(usageRef, { count: usedCount + 1, updatedAt: new Date().toISOString() }, { merge: true });
+        });
 
         const prompt = request.data?.prompt;
         const knowledge = request.data?.knowledge || '';
@@ -48,7 +72,7 @@ exports.askGemini = onCall(
         try {
             const result = await model.generateContent(fullPrompt);
             const text = result.response.text();
-            return { text };
+            return { text, usedCount: usedCount + 1, dailyLimit: DAILY_LIMIT };
         } catch (err) {
             const msg = String(err?.message || '');
             console.error('askGemini 錯誤:', msg);
@@ -56,6 +80,120 @@ exports.askGemini = onCall(
             if (msg.includes('429')) throw new HttpsError('resource-exhausted', '429');
             throw new HttpsError('internal', '呼叫 AI 服務失敗，請稍後再試。');
         }
+    }
+);
+
+// ─── setAdmin：設定管理員 Custom Claim（僅限現有管理員或首次設定）─────────────
+exports.setAdmin = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        if (!request.auth) throw new HttpsError('unauthenticated', '請先登入。');
+
+        // 僅允許已是 admin 的人呼叫（或直接在 Firebase Console 手動呼叫）
+        const caller = await admin.auth().getUser(request.auth.uid);
+        const isAdmin = caller.customClaims?.admin === true;
+
+        const targetEmail = request.data?.email;
+        if (!targetEmail) throw new HttpsError('invalid-argument', '請提供目標 email。');
+
+        // 首次設定：若目前沒有任何 admin 才允許
+        const { users } = await admin.auth().listUsers(100);
+        const hasAdmin = users.some(u => u.customClaims?.admin === true);
+        if (!isAdmin && hasAdmin) throw new HttpsError('permission-denied', '僅限管理員操作。');
+
+        const targetUser = await admin.auth().getUserByEmail(targetEmail);
+        await admin.auth().setCustomUserClaims(targetUser.uid, { admin: true });
+        console.log(`✅ 設定 ${targetEmail} 為管理員`);
+        return { success: true, message: `${targetEmail} 已設為管理員，請重新登入後生效。` };
+    }
+);
+
+// ─── getKnowledgeBase：讀取知識庫（admin only）────────────────────────────────
+exports.getKnowledgeBase = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        if (!request.auth) throw new HttpsError('unauthenticated', '請先登入。');
+        const user = await admin.auth().getUser(request.auth.uid);
+        if (!user.customClaims?.admin) throw new HttpsError('permission-denied', '僅限管理員。');
+
+        const snap = await db.doc('config/knowledgeBase').get();
+        const content = snap.exists ? snap.data().content : '';
+        return { content };
+    }
+);
+
+// ─── updateKnowledgeBase：更新知識庫（admin only）────────────────────────────
+exports.updateKnowledgeBase = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        if (!request.auth) throw new HttpsError('unauthenticated', '請先登入。');
+        const user = await admin.auth().getUser(request.auth.uid);
+        if (!user.customClaims?.admin) throw new HttpsError('permission-denied', '僅限管理員。');
+
+        const content = request.data?.content;
+        if (typeof content !== 'string') throw new HttpsError('invalid-argument', '內容格式錯誤。');
+
+        await db.doc('config/knowledgeBase').set({
+            content,
+            updatedAt: new Date().toISOString(),
+            updatedBy: request.auth.token.email || request.auth.uid,
+        });
+        console.log(`✅ 知識庫已更新，長度：${content.length} 字`);
+        return { success: true };
+    }
+);
+
+// ─── getAdminStats：取得使用統計（admin only）────────────────────────────────
+exports.getAdminStats = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        if (!request.auth) throw new HttpsError('unauthenticated', '請先登入。');
+        const user = await admin.auth().getUser(request.auth.uid);
+        if (!user.customClaims?.admin) throw new HttpsError('permission-denied', '僅限管理員。');
+
+        // 讀取所有使用者的對話（chats collection）
+        const chatsSnap = await db.collection('chats').get();
+        const allChats = [];
+        chatsSnap.forEach(doc => {
+            const data = doc.data();
+            const history = Array.isArray(data.history) ? data.history : [];
+            history.forEach(h => {
+                allChats.push({
+                    uid: doc.id,
+                    userName: h.userName || '訪客',
+                    userEmail: h.userEmail || '',
+                    user: h.user || '',
+                    ai: h.ai || '',
+                    time: h.time || null,
+                });
+            });
+        });
+
+        // 熱門問題：簡單統計關鍵字
+        const questionWords = {};
+        allChats.forEach(c => {
+            const words = c.user.split(/[\s，。？！、,. ]+/).filter(w => w.length >= 2 && w.length <= 10);
+            words.forEach(w => { questionWords[w] = (questionWords[w] || 0) + 1; });
+        });
+        const topKeywords = Object.entries(questionWords)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([word, count]) => ({ word, count }));
+
+        // 今日活躍人數
+        const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
+        const todayStr = today.replace(/\//g, '-');
+        const usageSnap = await db.collectionGroup('daily').where('updatedAt', '>=', new Date().toISOString().slice(0, 10)).get();
+        const todayActiveUsers = new Set();
+        usageSnap.forEach(doc => { todayActiveUsers.add(doc.ref.parent.parent.id); });
+
+        return {
+            totalMessages: allChats.length,
+            totalUsers: chatsSnap.size,
+            todayActiveUsers: todayActiveUsers.size,
+            topKeywords,
+            recentChats: allChats.sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 50),
+        };
     }
 );
 

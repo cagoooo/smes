@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🛡️ 石門小智鈴｜管理員後台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap"
+        rel="stylesheet" />
+    <script type="module" src="./admin.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --sidebar-w: 240px;
+            --accent: #4f46e5;
+            --accent2: #0ea5e9;
+            --danger: #f43f5e;
+            --bg: #0f0a1e;
+            --card: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ── 登入遮罩 ── */
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f0a1e, #1e1040);
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 48px 40px;
+            text-align: center;
+            max-width: 360px;
+            width: 100%;
+            backdrop-filter: blur(20px);
+        }
+
+        .login-card h1 {
+            font-size: 22px;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .login-card p {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        #login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px;
+            border-radius: 50px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border: none;
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #login-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        #login-error {
+            color: var(--danger);
+            font-size: 13px;
+            margin-top: 12px;
+        }
+
+        /* ── 側邊欄 ── */
+        #sidebar {
+            width: var(--sidebar-w);
+            background: rgba(255, 255, 255, 0.03);
+            border-right: 1px solid var(--border);
+            padding: 28px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+        }
+
+        .sidebar-logo {
+            font-size: 16px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #a78bfa, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            padding: 0 8px 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: var(--card);
+            color: var(--text);
+        }
+
+        .nav-item.active {
+            background: rgba(79, 70, 229, 0.25);
+            color: #a78bfa;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        #admin-email {
+            font-size: 12px;
+            color: var(--muted);
+            padding: 0 8px 10px;
+        }
+
+        #logout-link {
+            font-size: 13px;
+            color: var(--danger);
+            cursor: pointer;
+            padding: 6px 8px;
+            display: block;
+        }
+
+        #logout-link:hover {
+            text-decoration: underline;
+        }
+
+        /* ── 主內容 ── */
+        #main {
+            margin-left: var(--sidebar-w);
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            min-height: 100vh;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        h2 {
+            font-size: 22px;
+            font-weight: 900;
+            margin-bottom: 24px;
+        }
+
+        /* ── 統計卡片 ── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .stat-card .val {
+            font-size: 32px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #a78bfa, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* ── 關鍵字清單 ── */
+        .keyword-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 28px;
+        }
+
+        .keyword-tag {
+            background: rgba(79, 70, 229, 0.2);
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            border-radius: 50px;
+            padding: 4px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #a78bfa;
+        }
+
+        /* ── 表格 ── */
+        .table-wrap {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 16px;
+            text-align: left;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            vertical-align: top;
+            word-break: break-word;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .q-cell {
+            max-width: 200px;
+        }
+
+        .a-cell {
+            max-width: 280px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        /* ── 知識庫編輯 ── */
+        #kb-editor {
+            width: 100%;
+            height: 60vh;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 13px;
+            color: var(--text);
+            resize: vertical;
+            outline: none;
+            line-height: 1.6;
+        }
+
+        #kb-editor:focus {
+            border-color: var(--accent);
+        }
+
+        .kb-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            align-items: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .btn-secondary {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #kb-status {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        #kb-char-count {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        /* ── 管理員設定 ── */
+        .setting-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            margin-bottom: 20px;
+        }
+
+        .setting-card h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .admin-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .admin-input:focus {
+            border-color: var(--accent);
+        }
+
+        #set-admin-msg {
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        /* ── 載入中 ── */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: var(--muted);
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ── RWD ── */
+        @media (max-width: 768px) {
+            #sidebar {
+                width: 60px;
+                padding: 16px 8px;
+            }
+
+            .nav-item span {
+                display: none;
+            }
+
+            .sidebar-logo,
+            #admin-email {
+                display: none;
+            }
+
+            #main {
+                margin-left: 60px;
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 登入遮罩 -->
+    <div id="login-screen">
+        <div class="login-card">
+            <div style="font-size:48px;margin-bottom:12px">🛡️</div>
+            <h1>管理員後台</h1>
+            <p>石門小智鈴 AI 客服系統</p>
+            <button id="login-btn">
+                <img src="https://www.google.com/favicon.ico" width="18" alt="G" />
+                使用 Google 帳號登入
+            </button>
+            <div id="login-error"></div>
+        </div>
+    </div>
+
+    <!-- 後台主介面 -->
+    <nav id="sidebar">
+        <div class="sidebar-logo">🛡️ 管理員後台</div>
+        <div class="nav-item active" data-page="stats">📊 <span>使用統計</span></div>
+        <div class="nav-item" data-page="records">💬 <span>對話記錄</span></div>
+        <div class="nav-item" data-page="knowledge">📝 <span>知識庫編輯</span></div>
+        <div class="nav-item" data-page="settings">⚙️ <span>系統設定</span></div>
+        <div class="sidebar-bottom">
+            <div id="admin-email"></div>
+            <a id="logout-link">🚪 登出</a>
+        </div>
+    </nav>
+
+    <main id="main">
+
+        <!-- 使用統計 -->
+        <div id="page-stats" class="page active">
+            <h2>📊 使用統計</h2>
+            <div id="stats-content">
+                <div class="loading">
+                    <div class="spinner"></div>載入中…
+                </div>
+            </div>
+        </div>
+
+        <!-- 對話記錄 -->
+        <div id="page-records" class="page">
+            <h2>💬 對話記錄</h2>
+            <div style="margin-bottom:12px">
+                <input id="search-input" placeholder="🔍 搜尋使用者或關鍵字…" style="background:var(--card);border:1px solid var(--border);border-radius:10px;
+               padding:10px 16px;color:var(--text);font-size:14px;width:100%;max-width:400px;outline:none" />
+            </div>
+            <div id="records-content">
+                <div class="loading">
+                    <div class="spinner"></div>載入中…
+                </div>
+            </div>
+        </div>
+
+        <!-- 知識庫編輯 -->
+        <div id="page-knowledge" class="page">
+            <h2>📝 知識庫線上編輯</h2>
+            <p style="color:var(--muted);margin-bottom:16px;font-size:14px">
+                修改後按「儲存」，AI 將立即使用最新版本回答問題。
+            </p>
+            <textarea id="kb-editor" placeholder="載入中…"></textarea>
+            <div id="kb-char-count">0 字元</div>
+            <div class="kb-actions">
+                <button class="btn-primary" id="kb-save-btn">💾 儲存知識庫</button>
+                <button class="btn-secondary" id="kb-reload-btn">🔄 重新載入</button>
+                <span id="kb-status"></span>
+            </div>
+        </div>
+
+        <!-- 系統設定 -->
+        <div id="page-settings" class="page">
+            <h2>⚙️ 系統設定</h2>
+            <div class="setting-card">
+                <h3>👑 設定管理員帳號</h3>
+                <p style="color:var(--muted);font-size:13px;margin-bottom:14px">
+                    輸入使用者 Email，授予管理員權限（需重新登入後生效）。
+                </p>
+                <div class="input-row">
+                    <input id="admin-email-input" class="admin-input" type="email"
+                        placeholder="teacher@smes.tyc.edu.tw" />
+                    <button class="btn-primary" id="set-admin-btn">授權</button>
+                </div>
+                <div id="set-admin-msg"></div>
+            </div>
+        </div>
+
+    </main>
+
+</body>
+
+</html>
