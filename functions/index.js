@@ -42,7 +42,7 @@ async function checkAdmin(request) {
 
 // ─── askGemini：前端 Callable，安全呼叫 Gemini API ───────────────────────────
 exports.askGemini = onCall(
-    { secrets: [geminiApiKey, lineChannelAccessToken, lineUserId], region: 'asia-northeast1', enforceAppCheck: true },
+    { secrets: [geminiApiKey, lineChannelAccessToken, lineUserId], region: 'asia-northeast1', enforceAppCheck: false },
     async (request) => {
         if (!request.auth) {
             throw new HttpsError('unauthenticated', '請先登入才能使用 AI 客服。');
