@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>🛡️ 石門小智鈴｜管理員後台</title>
-    <link rel="icon" href="./assets/logo-E17QSrMQ.png" />
+    <link rel="icon" href="./logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap"
         rel="stylesheet" />
@@ -200,143 +200,578 @@
         /* ── 統計卡片 ── */
         .stat-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 16px;
-            margin-bottom: 28px;
+            margin-bottom: 32px;
         }
 
         .stat-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px;
+            position: relative;
+            border-radius: 20px;
+            padding: 24px 20px 20px;
+            overflow: hidden;
+            cursor: default;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px) scale(1.02);
+        }
+
+        /* 卡片 1：訊息總數 — 藍紫漸層 */
+        .stat-card.card-msg {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1d4ed8 100%);
+            border: 1px solid rgba(99, 102, 241, 0.5);
+            box-shadow: 0 0 24px rgba(99, 102, 241, 0.25);
+        }
+
+        .stat-card.card-msg:hover {
+            box-shadow: 0 8px 40px rgba(99, 102, 241, 0.45);
+        }
+
+        /* 卡片 2：總使用者 — 玫瑰紫漸層 */
+        .stat-card.card-users {
+            background: linear-gradient(135deg, #1f1b2e 0%, #4a1942 50%, #9d174d 100%);
+            border: 1px solid rgba(236, 72, 153, 0.5);
+            box-shadow: 0 0 24px rgba(236, 72, 153, 0.2);
+        }
+
+        .stat-card.card-users:hover {
+            box-shadow: 0 8px 40px rgba(236, 72, 153, 0.4);
+        }
+
+        /* 卡片 3：今日活躍 — 橙金漸層 */
+        .stat-card.card-today {
+            background: linear-gradient(135deg, #1c1a12 0%, #78350f 50%, #d97706 100%);
+            border: 1px solid rgba(251, 191, 36, 0.5);
+            box-shadow: 0 0 24px rgba(251, 191, 36, 0.2);
+        }
+
+        .stat-card.card-today:hover {
+            box-shadow: 0 8px 40px rgba(251, 191, 36, 0.4);
+        }
+
+        /* 卡片裝飾圓圈 */
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: -15px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .stat-card .stat-icon {
+            font-size: 22px;
+            margin-bottom: 10px;
+            display: inline-block;
         }
 
         .stat-card .label {
-            font-size: 12px;
-            color: var(--muted);
-            margin-bottom: 8px;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 6px;
         }
 
         .stat-card .val {
-            font-size: 32px;
+            font-size: 44px;
             font-weight: 900;
-            background: linear-gradient(135deg, #a78bfa, #38bdf8);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #fff;
+            line-height: 1;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
         }
 
-        /* ── 關鍵字清單 ── */
-        .keyword-list {
+        .stat-card .stat-sub {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.45);
+            margin-top: 6px;
+        }
+
+        /* ── 關鍵字排行 ── */
+        .keyword-section h3 {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 14px;
+        }
+
+        .keyword-bars {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+            flex-direction: column;
+            gap: 10px;
             margin-bottom: 28px;
         }
 
-        .keyword-tag {
-            background: rgba(79, 70, 229, 0.2);
-            border: 1px solid rgba(167, 139, 250, 0.3);
-            border-radius: 50px;
-            padding: 4px 14px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #a78bfa;
+        .keyword-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        /* ── 表格 ── */
-        .table-wrap {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
+        .keyword-rank {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            width: 22px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .keyword-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #e2e8f0;
+            width: 120px;
+            flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .keyword-bar-wrap {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 99px;
+            height: 8px;
             overflow: hidden;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
+        .keyword-bar-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        th {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 12px 16px;
-            text-align: left;
-            color: var(--muted);
+        .keyword-count {
+            font-size: 12px;
             font-weight: 700;
+            color: var(--muted);
+            width: 28px;
+            text-align: right;
+            flex-shrink: 0;
         }
 
-        td {
-            padding: 12px 16px;
-            border-top: 1px solid var(--border);
-            vertical-align: top;
+        /* 排行色 */
+        .keyword-row:nth-child(1) .keyword-bar-fill {
+            background: linear-gradient(90deg, #f472b6, #a78bfa);
+        }
+
+        .keyword-row:nth-child(2) .keyword-bar-fill {
+            background: linear-gradient(90deg, #fb923c, #f472b6);
+        }
+
+        .keyword-row:nth-child(3) .keyword-bar-fill {
+            background: linear-gradient(90deg, #facc15, #fb923c);
+        }
+
+        .keyword-row:nth-child(n+4) .keyword-bar-fill {
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+        }
+
+        /* RWD */
+        @media (max-width: 768px) {
+            .stat-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .keyword-name {
+                width: 80px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+
+        /* ── 對話記錄搜尋列 ── */
+        .records-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 220px;
+            max-width: 460px;
+        }
+
+        .search-wrap svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            pointer-events: none;
+        }
+
+        #search-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 50px;
+            padding: 10px 16px 10px 40px;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        #search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .record-count-badge {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 5px 14px;
+            border-radius: 50px;
+            white-space: nowrap;
+        }
+
+        /* ── 對話記錄卡片 ── */
+        .chat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .chat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 18px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        /* 使用者資訊列 */
+        .chat-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 900;
+            flex-shrink: 0;
+            color: #fff;
+        }
+
+        .user-avatar.anon {
+            background: linear-gradient(135deg, #475569, #334155);
+        }
+
+        .user-avatar.auth {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+        }
+
+        .user-meta {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .user-name {
+            font-weight: 700;
+            font-size: 14px;
+            color: #e2e8f0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-email {
+            font-size: 11px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .time-chip {
+            font-size: 11px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 99px;
+            padding: 3px 10px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Q&A 內容 */
+        .chat-q {
+            background: rgba(99, 102, 241, 0.12);
+            border-left: 3px solid #6366f1;
+            border-radius: 0 10px 10px 0;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: #c7d2fe;
+            line-height: 1.5;
             word-break: break-word;
         }
 
-        tr:hover td {
-            background: rgba(255, 255, 255, 0.03);
+        .chat-q .q-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #818cf8;
+            margin-bottom: 4px;
         }
 
-        .q-cell {
-            max-width: 200px;
-        }
-
-        .a-cell {
-            max-width: 280px;
-            color: var(--muted);
+        .chat-a {
+            background: rgba(16, 185, 129, 0.08);
+            border-left: 3px solid #34d399;
+            border-radius: 0 10px 10px 0;
+            padding: 10px 14px;
             font-size: 12px;
+            color: #6ee7b7;
+            line-height: 1.5;
+            word-break: break-word;
         }
 
-        /* ── 知識庫編輯 ── */
-        #kb-editor {
-            width: 100%;
-            height: 60vh;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
-            font-family: monospace;
-            font-size: 13px;
-            color: var(--text);
-            resize: vertical;
-            outline: none;
+        .chat-a .a-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #34d399;
+            margin-bottom: 4px;
+        }
+
+        /* RWD */
+        @media (max-width: 640px) {
+            .chat-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .records-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-wrap {
+                max-width: 100%;
+            }
+        }
+
+        /* ── 知識庫編輯器 ── */
+        .kb-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* 提示卡片區 */
+        .kb-tips {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .kb-tip-card {
+            border-radius: 14px;
+            padding: 14px 16px;
+            font-size: 12px;
             line-height: 1.6;
         }
 
-        #kb-editor:focus {
-            border-color: var(--accent);
+        .kb-tip-card.blue {
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
         }
 
+        .kb-tip-card.green {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            color: #6ee7b7;
+        }
+
+        .kb-tip-card.amber {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fcd34d;
+        }
+
+        .kb-tip-card .tip-title {
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        /* 編輯器外框 */
+        .kb-editor-wrap {
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        /* 標題列（仿 Mac 風格） */
+        .kb-title-bar {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .mac-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .mac-dot.red {
+            background: #ff5f57;
+        }
+
+        .mac-dot.yellow {
+            background: #febc2e;
+        }
+
+        .mac-dot.green {
+            background: #28c840;
+        }
+
+        .kb-filename {
+            flex: 1;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            font-family: monospace;
+        }
+
+        #kb-editor {
+            width: 100%;
+            height: 55vh;
+            background: #0d1117;
+            border: none;
+            padding: 20px 24px;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 13.5px;
+            color: #e6edf3;
+            resize: vertical;
+            outline: none;
+            line-height: 1.7;
+            tab-size: 2;
+        }
+
+        #kb-editor::placeholder {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        #kb-editor:focus {
+            background: #0a0e14;
+        }
+
+        /* 狀態列 */
+        .kb-statusbar {
+            background: rgba(255, 255, 255, 0.04);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 7px 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.35);
+            font-family: monospace;
+        }
+
+        .kb-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .kb-stat-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #28c840;
+            box-shadow: 0 0 6px #28c840;
+        }
+
+        #kb-char-count {
+            color: #7ee787;
+            font-weight: 700;
+        }
+
+        /* 工具列 */
         .kb-actions {
             display: flex;
             gap: 12px;
-            margin-top: 12px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
             border: none;
             color: white;
-            padding: 10px 24px;
+            padding: 11px 26px;
             border-radius: 50px;
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            filter: brightness(1.1);
+            box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5);
         }
 
         .btn-secondary {
-            background: var(--card);
-            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             color: var(--text);
-            padding: 10px 24px;
+            padding: 11px 24px;
             border-radius: 50px;
             font-size: 14px;
             font-weight: 700;
@@ -345,18 +780,31 @@
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-1px);
         }
 
         #kb-status {
             font-size: 13px;
             color: var(--muted);
+            margin-left: auto;
         }
 
-        #kb-char-count {
-            font-size: 12px;
-            color: var(--muted);
-            margin-top: 6px;
+        /* RWD */
+        @media (max-width: 640px) {
+            .kb-tips {
+                grid-template-columns: 1fr;
+            }
+
+            .kb-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn-primary,
+            .btn-secondary {
+                text-align: center;
+            }
         }
 
         /* ── 管理員設定 ── */
@@ -369,35 +817,292 @@
             margin-bottom: 20px;
         }
 
-        .setting-card h3 {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 12px;
+        /* ── 系統設定頁面 ── */
+        /* Hero Banner */
+        .settings-hero {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 45%, #1d4ed8 100%);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            border-radius: 20px;
+            padding: 28px 32px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
         }
 
+        .settings-hero::before {
+            content: '';
+            position: absolute;
+            right: -40px;
+            top: -40px;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .settings-hero::after {
+            content: '';
+            position: absolute;
+            left: 60px;
+            bottom: -60px;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .hero-icon {
+            font-size: 48px;
+            flex-shrink: 0;
+        }
+
+        .hero-text h3 {
+            font-size: 20px;
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .hero-text p {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .hero-badge {
+            margin-left: auto;
+            background: rgba(52, 211, 153, 0.2);
+            border: 1px solid rgba(52, 211, 153, 0.4);
+            color: #34d399;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 16px;
+            border-radius: 50px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero-badge::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #34d399;
+            box-shadow: 0 0 6px #34d399;
+            animation: pulse-dot 1.5s ease infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.85);
+            }
+        }
+
+        /* 設定卡片格線 */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .setting-card {
+            border-radius: 18px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .setting-card:hover {
+            transform: translateY(-3px);
+        }
+
+        /* 卡片色系 */
+        .setting-card.purple {
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+        }
+
+        .setting-card.purple:hover {
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.35);
+        }
+
+        .setting-card.cyan {
+            background: linear-gradient(135deg, #082f49, #0c4a6e);
+            border: 1px solid rgba(6, 182, 212, 0.4);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+        }
+
+        .setting-card.cyan:hover {
+            box-shadow: 0 8px 32px rgba(6, 182, 212, 0.3);
+        }
+
+        .setting-card.amber {
+            background: linear-gradient(135deg, #1c1a12, #78350f);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.08);
+        }
+
+        .setting-card.amber:hover {
+            box-shadow: 0 8px 32px rgba(251, 191, 36, 0.25);
+        }
+
+        .setting-card.rose {
+            background: linear-gradient(135deg, #1f0a12, #881337);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            box-shadow: 0 0 20px rgba(244, 63, 94, 0.08);
+        }
+
+        .setting-card.rose:hover {
+            box-shadow: 0 8px 32px rgba(244, 63, 94, 0.25);
+        }
+
+        /* 卡片內部元素 */
+        .setting-card h3 {
+            font-size: 15px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-card .card-sub {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.45);
+            margin-bottom: 18px;
+        }
+
+        /* 輸入列 */
         .input-row {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .admin-input {
             flex: 1;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px 14px;
-            color: var(--text);
+            min-width: 180px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 11px 16px;
+            color: #fff;
             font-size: 14px;
             outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         .admin-input:focus {
-            border-color: var(--accent);
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+        }
+
+        .admin-input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
         }
 
         #set-admin-msg {
             font-size: 13px;
             margin-top: 10px;
+        }
+
+        /* 系統資訊列表 */
+        .info-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .info-label {
+            color: rgba(255, 255, 255, 0.55);
+        }
+
+        .info-value {
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .info-value.green {
+            color: #34d399;
+        }
+
+        .info-value.blue {
+            color: #60a5fa;
+        }
+
+        /* 警告列表 */
+        .warn-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .warn-item {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            border-left: 3px solid;
+            line-height: 1.5;
+        }
+
+        .warn-item.amber-border {
+            border-color: #fbbf24;
+        }
+
+        .warn-item.rose-border {
+            border-color: #f43f5e;
+        }
+
+        /* 全欄 */
+        .setting-card.full {
+            grid-column: 1 / -1;
+        }
+
+        /* RWD */
+        @media (max-width: 768px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .setting-card.full {
+                grid-column: auto;
+            }
+
+            .settings-hero {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .hero-badge {
+                margin-left: 0;
+            }
         }
 
         /* ── 載入中 ── */
@@ -445,7 +1150,7 @@
             }
         }
     </style>
-  <script type="module" crossorigin src="./assets/admin-U2oc5E6S.js"></script>
+  <script type="module" crossorigin src="./assets/admin-BGlbG35J.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/index.esm2017-F-JNOIJ7.js">
 </head>
 
@@ -493,9 +1198,15 @@
         <!-- 對話記錄 -->
         <div id="page-records" class="page">
             <h2>💬 對話記錄</h2>
-            <div style="margin-bottom:12px">
-                <input id="search-input" placeholder="🔍 搜尋使用者或關鍵字…" style="background:var(--card);border:1px solid var(--border);border-radius:10px;
-               padding:10px 16px;color:var(--text);font-size:14px;width:100%;max-width:400px;outline:none" />
+            <div class="records-toolbar">
+                <div class="search-wrap">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input id="search-input" placeholder="搜尋使用者或關鍵字…" />
+                </div>
+                <div class="record-count-badge" id="record-count">0 筆記錄</div>
             </div>
             <div id="records-content">
                 <div class="loading">
@@ -507,32 +1218,153 @@
         <!-- 知識庫編輯 -->
         <div id="page-knowledge" class="page">
             <h2>📝 知識庫線上編輯</h2>
-            <p style="color:var(--muted);margin-bottom:16px;font-size:14px">
-                修改後按「儲存」，AI 將立即使用最新版本回答問題。
-            </p>
-            <textarea id="kb-editor" placeholder="載入中…"></textarea>
-            <div id="kb-char-count">0 字元</div>
+
+            <!-- 提示卡片 -->
+            <div class="kb-tips">
+                <div class="kb-tip-card blue">
+                    <div class="tip-title">💡 編輯技巧</div>
+                    支援明文區段標題、條列要點、Q&amp;A 格式。建議使用简潔繁體中文。
+                </div>
+                <div class="kb-tip-card green">
+                    <div class="tip-title">✅ 立即生效</div>
+                    儲存後 AI 將在下次對話立即使用新內容，無需重新部署。
+                </div>
+                <div class="kb-tip-card amber">
+                    <div class="tip-title">⚠️ 警告</div>
+                    廣泛內容延方徠加速度，建議保持在 5000 字元以內。
+                </div>
+            </div>
+
+            <!-- 編輯器 -->
+            <div class="kb-editor-wrap">
+                <div class="kb-title-bar">
+                    <div class="mac-dot red"></div>
+                    <div class="mac-dot yellow"></div>
+                    <div class="mac-dot green"></div>
+                    <div class="kb-filename">📄 knowledge_base.txt — 知識庫編輯器</div>
+                </div>
+                <textarea id="kb-editor" placeholder="載入中…"></textarea>
+                <div class="kb-statusbar">
+                    <div class="kb-stat-item">
+                        <div class="kb-stat-dot"></div>
+                        已連線
+                    </div>
+                    <div class="kb-stat-item">字元：<span id="kb-char-count">0</span></div>
+                    <div class="kb-stat-item">行數：<span id="kb-line-count">0</span></div>
+                    <span id="kb-status" style="margin-left:auto"></span>
+                </div>
+            </div>
+
+            <!-- 操作工具列 -->
             <div class="kb-actions">
-                <button class="btn-primary" id="kb-save-btn">💾 儲存知識庫</button>
-                <button class="btn-secondary" id="kb-reload-btn">🔄 重新載入</button>
-                <span id="kb-status"></span>
+                <button class="btn-primary" id="kb-save-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        style="vertical-align:-2px;margin-right:6px">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    儲存知識庫
+                </button>
+                <button class="btn-secondary" id="kb-reload-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        style="vertical-align:-2px;margin-right:6px">
+                        <polyline points="23 4 23 10 17 10" />
+                        <polyline points="1 20 1 14 7 14" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                    重新載入
+                </button>
             </div>
         </div>
 
         <!-- 系統設定 -->
         <div id="page-settings" class="page">
             <h2>⚙️ 系統設定</h2>
-            <div class="setting-card">
-                <h3>👑 設定管理員帳號</h3>
-                <p style="color:var(--muted);font-size:13px;margin-bottom:14px">
-                    輸入使用者 Email，授予管理員權限（需重新登入後生效）。
-                </p>
-                <div class="input-row">
-                    <input id="admin-email-input" class="admin-input" type="email"
-                        placeholder="teacher@smes.tyc.edu.tw" />
-                    <button class="btn-primary" id="set-admin-btn">授權</button>
+
+            <!-- Hero Banner -->
+            <div class="settings-hero">
+                <div class="hero-icon">🛡️</div>
+                <div class="hero-text">
+                    <h3>石門小智鈴 AI 客服系統</h3>
+                    <p>管理員專屬設定區域 · 修改前請確認權限</p>
                 </div>
-                <div id="set-admin-msg"></div>
+                <div class="hero-badge">系統運行中</div>
+            </div>
+
+            <div class="settings-grid">
+
+                <!-- 管理員授權卡 -->
+                <div class="setting-card purple full">
+                    <h3>👑 設定管理員帳號</h3>
+                    <div class="card-sub">輸入使用者 Email 授予管理員權限，需重新登入後生效</div>
+                    <div class="input-row">
+                        <input id="admin-email-input" class="admin-input" type="email"
+                            placeholder="teacher@smes.tyc.edu.tw" />
+                        <button class="btn-primary" id="set-admin-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" style="vertical-align:-2px;margin-right:6px">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <polyline points="16 11 18 13 22 9" />
+                            </svg>
+                            授權管理員
+                        </button>
+                    </div>
+                    <div id="set-admin-msg"></div>
+                </div>
+
+                <!-- 系統資訊卡 -->
+                <div class="setting-card cyan">
+                    <h3>📊 系統資訊</h3>
+                    <div class="card-sub">目前運行環境與部署狀態</div>
+                    <div class="info-list">
+                        <div class="info-row">
+                            <span class="info-label">專案</span>
+                            <span class="info-value blue">smes-e1dc3</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">地區</span>
+                            <span class="info-value">asia-northeast1</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">AI 模型</span>
+                            <span class="info-value blue">Gemini 2.5 Flash Lite</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">後端架構</span>
+                            <span class="info-value">Firebase Cloud Functions</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">資料庫</span>
+                            <span class="info-value green">運行中</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 安全專區卡 -->
+                <div class="setting-card amber">
+                    <h3>🔐 安全注意事項</h3>
+                    <div class="card-sub">操作系統前必讀</div>
+                    <div class="warn-list">
+                        <div class="warn-item amber-border">💡 管理員授權後需「重新登入」才生效，請告知被授權者。</div>
+                        <div class="warn-item amber-border">✅ 目前白名單已包含: ipad@mail2.smes.tyc.edu.tw 及 cagooo@gmail.com。
+                        </div>
+                        <div class="warn-item amber-border">⚙️ 若需加入更多管理員，請修改 functions/index.js 中的 ADMIN_EMAILS。</div>
+                    </div>
+                </div>
+
+                <!-- 危険操作卡 -->
+                <div class="setting-card rose full">
+                    <h3>⚠️ 危険操作區</h3>
+                    <div class="card-sub">以下操作不可逆，請謹慎執行</div>
+                    <div class="warn-list">
+                        <div class="warn-item rose-border">🗑️ <strong>清除對話記錄</strong>：將導致所有用戶問答永久刪除，無法復原。目前不開放此功能。
+                        </div>
+                        <div class="warn-item rose-border">🔑 <strong>重置知識庫</strong>：將使 AI 回到免訓練狀態。請先備份再操作。</div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
