@@ -2,6 +2,24 @@
 
 ---
 
+## v3.1.0 — 2026-03-01｜管理員後台修復與 UI 全面升級
+
+### 🐛 Bug 修正
+- **修復 `getAdminStats` 500 錯誤**：移除需要 Firestore Index 的 `collectionGroup('daily')` 查詢（code 9 FAILED_PRECONDITION），改從 `chats` 集合直接計算今日活躍人數
+- **修復管理員登入失敗**：新增 `checkAdmin` Email 白名單（`ADMIN_EMAILS`），移除前端 Custom Claim 依賴，改由後端統一驗證
+- **修復 Cloud Run IAM 403**：為所有管理員 Functions 授予 `roles/run.invoker` 給 `allUsers`
+
+### ✨ 管理員後台 UI 全面升級
+- **使用統計**：三色漸層卡片（藍紫/玫瑰/橙金）、數字計數動畫、關鍵字長條圖排行（前三名獨立漸層色）
+- **對話記錄**：表格改為 RWD 卡片 Grid，含漸層頭像（已登入=藍紫/匿名=灰）、藍紫問題泡泡、翠綠 AI 回答泡泡、記錄數量徽章
+- **知識庫編輯**：IDE 風格（Mac 三色圓點標題列、GitHub Dark 底色）、三欄彩色提示卡片、底部狀態列（字元/行數即時統計與過量警告色）
+- **系統設定**：Hero Banner + 四張多彩設定卡片（管理員授權-紫全欄、系統資訊-青、安全注意-橙、危険操作-玫瑰全欄）、閃爍連線狀態徽章
+
+### 🔒 後端強化
+- `functions/index.js` 新增 `ADMIN_EMAILS` 白名單常數與 `checkAdmin()` 通用驗證函式，所有管理員 Function 統一採用
+
+---
+
 ## v3.0.0 — 2026-03-01｜重大架構安全升級
 
 ### 🔐 安全性（Breaking Change）

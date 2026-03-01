@@ -16,6 +16,31 @@ const lineUserId = defineSecret('LINE_USER_ID');
 // 部署至亞太區域
 setGlobalOptions({ region: 'asia-northeast1' });
 
+// ─── 管理員驗證：email 白名單（優先）+ Custom Claims（備用）──────────────
+const ADMIN_EMAILS = [
+    'ipad@mail2.smes.tyc.edu.tw',
+    'cagooo@gmail.com', // 開發者備用
+];
+
+async function checkAdmin(request) {
+    if (!request.auth) throw new HttpsError('unauthenticated', '請先登入。');
+    const email = request.auth.token?.email || '';
+    if (ADMIN_EMAILS.includes(email)) return; // email 白名單直接通過
+    // 備用：讀 Firestore config/admins 動態清單
+    try {
+        const snap = await db.doc('config/admins').get();
+        if (snap.exists) {
+            const emails = snap.data().emails || [];
+            if (emails.includes(email)) return;
+        }
+    } catch (_) { }
+    // 最後：檢查 Custom Claim
+    const user = await admin.auth().getUser(request.auth.uid);
+    if (user.customClaims?.admin !== true) {
+        throw new HttpsError('permission-denied', '僅限管理員。');
+    }
+}
+
 // ─── askGemini：前端 Callable，安全呼叫 Gemini API ───────────────────
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
@@ -83,24 +108,13 @@ exports.askGemini = onCall(
     }
 );
 
-// ─── setAdmin：設定管理員 Custom Claim（僅限現有管理員或首次設定）─────────────
+// ─── setAdmin：設定管理員（僅限白名單管理員）─────────────────────────────────
 exports.setAdmin = onCall(
     { region: 'asia-northeast1' },
     async (request) => {
-        if (!request.auth) throw new HttpsError('unauthenticated', '請先登入。');
-
-        // 僅允許已是 admin 的人呼叫（或直接在 Firebase Console 手動呼叫）
-        const caller = await admin.auth().getUser(request.auth.uid);
-        const isAdmin = caller.customClaims?.admin === true;
-
+        await checkAdmin(request);
         const targetEmail = request.data?.email;
         if (!targetEmail) throw new HttpsError('invalid-argument', '請提供目標 email。');
-
-        // 首次設定：若目前沒有任何 admin 才允許
-        const { users } = await admin.auth().listUsers(100);
-        const hasAdmin = users.some(u => u.customClaims?.admin === true);
-        if (!isAdmin && hasAdmin) throw new HttpsError('permission-denied', '僅限管理員操作。');
-
         const targetUser = await admin.auth().getUserByEmail(targetEmail);
         await admin.auth().setCustomUserClaims(targetUser.uid, { admin: true });
         console.log(`✅ 設定 ${targetEmail} 為管理員`);
@@ -112,10 +126,7 @@ exports.setAdmin = onCall(
 exports.getKnowledgeBase = onCall(
     { region: 'asia-northeast1' },
     async (request) => {
-        if (!request.auth) throw new HttpsError('unauthenticated', '請先登入。');
-        const user = await admin.auth().getUser(request.auth.uid);
-        if (!user.customClaims?.admin) throw new HttpsError('permission-denied', '僅限管理員。');
-
+        await checkAdmin(request);
         const snap = await db.doc('config/knowledgeBase').get();
         const content = snap.exists ? snap.data().content : '';
         return { content };
@@ -126,13 +137,9 @@ exports.getKnowledgeBase = onCall(
 exports.updateKnowledgeBase = onCall(
     { region: 'asia-northeast1' },
     async (request) => {
-        if (!request.auth) throw new HttpsError('unauthenticated', '請先登入。');
-        const user = await admin.auth().getUser(request.auth.uid);
-        if (!user.customClaims?.admin) throw new HttpsError('permission-denied', '僅限管理員。');
-
+        await checkAdmin(request);
         const content = request.data?.content;
         if (typeof content !== 'string') throw new HttpsError('invalid-argument', '內容格式錯誤。');
-
         await db.doc('config/knowledgeBase').set({
             content,
             updatedAt: new Date().toISOString(),
@@ -147,9 +154,7 @@ exports.updateKnowledgeBase = onCall(
 exports.getAdminStats = onCall(
     { region: 'asia-northeast1' },
     async (request) => {
-        if (!request.auth) throw new HttpsError('unauthenticated', '請先登入。');
-        const user = await admin.auth().getUser(request.auth.uid);
-        if (!user.customClaims?.admin) throw new HttpsError('permission-denied', '僅限管理員。');
+        await checkAdmin(request);
 
         // 讀取所有使用者的對話（chats collection）
         const chatsSnap = await db.collection('chats').get();
@@ -180,12 +185,14 @@ exports.getAdminStats = onCall(
             .slice(0, 10)
             .map(([word, count]) => ({ word, count }));
 
-        // 今日活躍人數
-        const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
-        const todayStr = today.replace(/\//g, '-');
-        const usageSnap = await db.collectionGroup('daily').where('updatedAt', '>=', new Date().toISOString().slice(0, 10)).get();
+        // 今日活躍人數（從已讀取的 chats 計算，不需額外 Index）
+        const todayPrefix = new Date().toISOString().slice(0, 10); // e.g. "2026-03-01"
         const todayActiveUsers = new Set();
-        usageSnap.forEach(doc => { todayActiveUsers.add(doc.ref.parent.parent.id); });
+        allChats.forEach(c => {
+            if (c.time && String(c.time).startsWith(todayPrefix)) {
+                todayActiveUsers.add(c.uid);
+            }
+        });
 
         return {
             totalMessages: allChats.length,
