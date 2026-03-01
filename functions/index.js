@@ -268,7 +268,7 @@ exports.notifyLineOnNewChat = onDocumentUpdated(
                             action: {
                                 type: 'uri',
                                 label: '🖥️ 查看系統',
-                                uri: 'https://smes-e1dc3.web.app'
+                                uri: 'https://cagoooo.github.io/smes/'
                             },
                             flex: 1
                         },
