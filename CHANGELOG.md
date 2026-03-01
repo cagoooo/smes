@@ -1,6 +1,22 @@
 # 📋 CHANGELOG — 石門小智鈴 AI 客服
 
 ---
+## v3.3.0 — 2026-03-01｜四大進階功能
+
+### ✨ 新增功能
+- **對話記錄日期篩選**：在對話記錄工具列加入「起始日期 ─ 結束日期」篩選，支援與關鍵字搜尋合併過濾
+- **知識庫版本歷史**：儲存知識庫時自動建立快照，可瀏覽最近 20 個版本並一鍵回復
+- **統計天數切換**：統計儀表板加入 7 / 14 / 30 天切換按鈕，折線圖即時更新
+- **LINE 告警關鍵字**：設定頁新增告警關鍵字管理卡片，關鍵字命中時即時 LINE 推播通知
+
+### 🔧 後端
+- `updateKnowledgeBase`：儲存前自動快照至 `knowledge/history/{timestamp}`
+- `getAdminStats`：新增 `days` 參數（7 / 14 / 30 / 0=全部）
+- 新增 `getKnowledgeHistory` / `restoreKnowledgeVersion`
+- 新增 `getAlertKeywords` / `setAlertKeywords`
+
+---
+
 
 ## v3.2.1 — 2026-03-01｜RWD 全面優化 + 圖表高度修正
 

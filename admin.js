@@ -19,11 +19,15 @@ const auth = getAuth(app);
 const fns = getFunctions(app, 'asia-northeast1');
 
 // ── Cloud Functions ────────────────────────────────────────────
-const getAdminStatsFn = httpsCallable(fns, 'getAdminStats');
-const getKnowledgeBaseFn = httpsCallable(fns, 'getKnowledgeBase');
-const updateKnowledgeBaseFn = httpsCallable(fns, 'updateKnowledgeBase');
-const setAdminFn = httpsCallable(fns, 'setAdmin');
-const deleteUserChatFn = httpsCallable(fns, 'deleteUserChat');
+const getAdminStatsFn          = httpsCallable(fns, 'getAdminStats');
+const getKnowledgeBaseFn       = httpsCallable(fns, 'getKnowledgeBase');
+const updateKnowledgeBaseFn    = httpsCallable(fns, 'updateKnowledgeBase');
+const setAdminFn               = httpsCallable(fns, 'setAdmin');
+const deleteUserChatFn         = httpsCallable(fns, 'deleteUserChat');
+const getKnowledgeHistoryFn    = httpsCallable(fns, 'getKnowledgeHistory');
+const restoreKnowledgeVersionFn = httpsCallable(fns, 'restoreKnowledgeVersion');
+const getAlertKeywordsFn       = httpsCallable(fns, 'getAlertKeywords');
+const setAlertKeywordsFn       = httpsCallable(fns, 'setAlertKeywords');
 
 // ── State ──────────────────────────────────────────────────────
 let statsCache = null;
@@ -132,14 +136,19 @@ document.querySelectorAll('.nav-item').forEach(item => {
 
 // ── 載入統計資料 ──────────────────────────────────────────────
 let lastStatsUpdate = null;
-async function loadStats() {
+let currentStatsDays = 7;
+async function loadStats(days = currentStatsDays) {
+    currentStatsDays = days;
+    document.querySelectorAll('.days-btn').forEach(b => {
+        b.classList.toggle('active', Number(b.dataset.days) === days);
+    });
     const refreshBtn = document.getElementById('stats-refresh-btn');
     if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.style.opacity = '0.5'; }
     try {
-        const res = await getAdminStatsFn();
+        const res = await getAdminStatsFn({ days });
         statsCache = res.data;
         lastStatsUpdate = new Date();
-        renderStats(statsCache);
+        renderStats(statsCache, days);
         renderRecords(statsCache.recentChats);
     } catch (e) {
         document.getElementById('stats-content').innerHTML =
@@ -149,7 +158,7 @@ async function loadStats() {
     }
 }
 
-function renderStats(data) {
+function renderStats(data, days = 7) {
     const maxKw = data.topKeywords[0]?.count || 1;
     const kwBars = data.topKeywords.map((k, i) => {
         const pct = Math.round((k.count / maxKw) * 100);
@@ -167,10 +176,16 @@ function renderStats(data) {
     const updatedStr = lastStatsUpdate
         ? lastStatsUpdate.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
         : '--:--';
+    const trendLabel = days === 0 ? '近30 天' : `近 ${days} 天`;
 
     document.getElementById('stats-content').innerHTML = `
     <div class="stats-header-bar">
       <span class="stats-update-time">⏱️ 最後更新：${updatedStr}</span>
+      <div class="days-toggle">
+        <button class="days-btn${days === 7 ? ' active' : ''}" data-days="7">7 天</button>
+        <button class="days-btn${days === 14 ? ' active' : ''}" data-days="14">14 天</button>
+        <button class="days-btn${days === 30 ? ' active' : ''}" data-days="30">30 天</button>
+      </div>
     </div>
     <div class="stat-grid">
       <div class="stat-card card-msg">
@@ -187,14 +202,14 @@ function renderStats(data) {
       </div>
       <div class="stat-card card-today">
         <div class="stat-icon">🔥</div>
-        <div class="label">今日活躍</div>
+        <div class="label">今日活踴</div>
         <div class="val" data-count="${data.todayActiveUsers}">0</div>
         <div class="stat-sub">${today}</div>
       </div>
     </div>
     <div class="chart-row">
       <div class="chart-card">
-        <h4>📈 近 7 天問答趨勢</h4>
+        <h4>📈 ${trendLabel}問答趨勢</h4>
         <canvas id="chart-trend"></canvas>
       </div>
       <div class="chart-card">
@@ -207,7 +222,12 @@ function renderStats(data) {
       <div class="keyword-bars">${kwBars}</div>
     </div>`;
 
-    // 數字計數動畫
+    // 日期天數按鈕事件
+    document.querySelectorAll('.days-btn').forEach(btn => {
+        btn.addEventListener('click', () => loadStats(Number(btn.dataset.days)));
+    });
+
+    // 數字計數動畻
     document.querySelectorAll('.val[data-count]').forEach(el => {
         const target = parseInt(el.dataset.count, 10);
         if (!target) { el.textContent = '0'; return; }
@@ -221,7 +241,7 @@ function renderStats(data) {
         }, 16);
     });
 
-    // 長條圖動畫（延遲 100ms 讓 DOM 準備好）
+    // 長條圖動畫
     setTimeout(() => {
         document.querySelectorAll('.keyword-bar-fill').forEach(bar => {
             bar.style.width = bar.dataset.pct + '%';
@@ -358,16 +378,35 @@ function updateRecordTable(chats) {
 }
 
 
-document.getElementById('search-input').addEventListener('input', function () {
-    const q = this.value.trim().toLowerCase();
-    if (!q) { updateRecordTable(allChats); return; }
-    const filtered = allChats.filter(c =>
+// ── 對話日期筜選 + 搜尋 ───────────────────────────────
+function applyRecordFilters() {
+    const q = (document.getElementById('search-input')?.value || '').trim().toLowerCase();
+    const from = document.getElementById('date-from')?.value;
+    const to = document.getElementById('date-to')?.value;
+    let result = allChats;
+    if (from) result = result.filter(c => c.time && String(c.time).slice(0, 10) >= from);
+    if (to) result = result.filter(c => c.time && String(c.time).slice(0, 10) <= to);
+    if (q) result = result.filter(c =>
         (c.userName || '').toLowerCase().includes(q) ||
         (c.userEmail || '').toLowerCase().includes(q) ||
         (c.user || '').toLowerCase().includes(q) ||
         (c.ai || '').toLowerCase().includes(q)
     );
-    updateRecordTable(filtered);
+    updateRecordTable(result);
+}
+
+document.getElementById('search-input').addEventListener('input', applyRecordFilters);
+document.addEventListener('change', e => {
+    if (e.target.id === 'date-from' || e.target.id === 'date-to') applyRecordFilters();
+});
+document.addEventListener('click', e => {
+    if (e.target.id === 'date-clear-btn') {
+        const df = document.getElementById('date-from');
+        const dt = document.getElementById('date-to');
+        if (df) df.value = '';
+        if (dt) dt.value = '';
+        applyRecordFilters();
+    }
 });
 
 // ── 刪除單筆對話（事件委派） ──────────────────────────────
@@ -475,10 +514,11 @@ document.getElementById('kb-save-btn').addEventListener('click', async () => {
         kbDirty = false;
         kbStatus.textContent = '✅ 已儲存！AI 將立即使用新版本。';
         kbStatus.style.color = '#34d399';
-        // 恢復按鈕樣式
         const saveBtn = document.getElementById('kb-save-btn');
         if (saveBtn) saveBtn.style.boxShadow = '';
         setTimeout(() => { kbStatus.textContent = ''; kbStatus.style.color = ''; }, 4000);
+        // 儲存後自動重弓轉歷史清單
+        loadKnowledgeHistory();
     } catch (e) {
         kbStatus.textContent = '❌ 儲存失敗：' + e.message;
         kbStatus.style.color = '#f43f5e';
@@ -486,6 +526,76 @@ document.getElementById('kb-save-btn').addEventListener('click', async () => {
 });
 
 document.getElementById('kb-reload-btn').addEventListener('click', loadKnowledgeBase);
+
+// ── 知識庫版本歷史 ──────────────────────────────────
+async function loadKnowledgeHistory() {
+    const listEl = document.getElementById('kb-history-list');
+    if (!listEl) return;
+    listEl.innerHTML = '<p style="color:var(--muted);padding:8px">載入中…</p>';
+    try {
+        const res = await getKnowledgeHistoryFn();
+        const versions = res.data.versions || [];
+        if (versions.length === 0) {
+            listEl.innerHTML = '<p style="color:var(--muted);padding:8px">尚無版本歷史</p>';
+            return;
+        }
+        listEl.innerHTML = versions.map(v => {
+            const t = v.savedAt ? new Date(v.savedAt).toLocaleString('zh-TW') : v.id;
+            const chars = v.charCount ? `${v.charCount.toLocaleString()} 字` : '';
+            const by = v.savedBy ? `由 ${v.savedBy}` : '';
+            return `<div class="kb-history-item">
+              <div class="kb-history-meta">
+                <span class="kb-history-time"> ${t}</span>
+                <span class="kb-history-chars">${chars}</span>
+                <span class="kb-history-by">${by}</span>
+              </div>
+              <button class="btn-restore" data-vid="${v.id}">⏪ 回復此版本</button>
+            </div>`;
+        }).join('');
+        listEl.querySelectorAll('.btn-restore').forEach(btn => {
+            btn.addEventListener('click', () => {
+                customConfirm({
+                    icon: '🗂️',
+                    title: '回復知識庫版本',
+                    message: '確定要用這個旧版本覆蓋現有知識庫嗎？',
+                    confirmText: '回復',
+                    confirmGradient: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                    onConfirm: async () => {
+                        btn.disabled = true;
+                        btn.textContent = '回復中…';
+                        try {
+                            const r = await restoreKnowledgeVersionFn({ versionId: btn.dataset.vid });
+                            kbEditor.value = r.data.content || '';
+                            updateKbStats();
+                            kbDirty = false;
+                            kbStatus.textContent = '✅ 版本已回復，請確認內容後再儲存。';
+                            kbStatus.style.color = '#34d399';
+                        } catch (err) {
+                            alert('回復失敗：' + err.message);
+                            btn.disabled = false;
+                            btn.textContent = '⏪ 回復此版本';
+                        }
+                    },
+                });
+            });
+        });
+    } catch (e) {
+        listEl.innerHTML = `<p style="color:#f43f5e">載入失敗：${e.message}</p>`;
+    }
+}
+
+// 版本歷史按鈕
+document.addEventListener('click', e => {
+    if (e.target.id === 'kb-history-toggle') {
+        const listEl = document.getElementById('kb-history-list');
+        if (!listEl) return;
+        const hidden = listEl.style.display === 'none' || !listEl.style.display;
+        listEl.style.display = hidden ? 'block' : 'none';
+        e.target.textContent = hidden ? '📁 收起版本歷史' : '🗂️ 查看版本歷史';
+        if (hidden) loadKnowledgeHistory();
+    }
+});
+
 
 // ── 設定管理員 ────────────────────────────────────────────────
 document.getElementById('set-admin-btn').addEventListener('click', async () => {
@@ -516,4 +626,61 @@ function escapeHtml(str) {
 
 // ── 統計刷新按鈕 ───────────────────────────────────────────────
 const refreshBtn = document.getElementById('stats-refresh-btn');
-if (refreshBtn) refreshBtn.addEventListener('click', loadStats);
+if (refreshBtn) refreshBtn.addEventListener('click', () => loadStats(currentStatsDays));
+
+// ── 告警關鍵字管理 ──────────────────────────────────
+let alertKeywords = [];
+
+async function loadAlertKeywords() {
+    const tagsEl = document.getElementById('alert-tags');
+    if (!tagsEl) return;
+    try {
+        const res = await getAlertKeywordsFn();
+        alertKeywords = res.data.keywords || [];
+        renderAlertTags();
+    } catch (e) { console.warn('告警關鍵字載入失敗:', e.message); }
+}
+
+function renderAlertTags() {
+    const tagsEl = document.getElementById('alert-tags');
+    if (!tagsEl) return;
+    tagsEl.innerHTML = alertKeywords.map((kw, i) =>
+        `<span class="alert-tag">${escapeHtml(kw)}
+          <button class="alert-tag-del" data-idx="${i}" title="移除">×</button>
+        </span>`
+    ).join('');
+    tagsEl.querySelectorAll('.alert-tag-del').forEach(btn => {
+        btn.addEventListener('click', () => {
+            alertKeywords.splice(Number(btn.dataset.idx), 1);
+            renderAlertTags();
+        });
+    });
+}
+
+async function saveAlertKeywords() {
+    const msgEl = document.getElementById('alert-save-msg');
+    if (msgEl) { msgEl.textContent = '⏳ 儲存中…'; msgEl.style.color = 'var(--muted)'; }
+    try {
+        await setAlertKeywordsFn({ keywords: alertKeywords });
+        if (msgEl) { msgEl.textContent = '✅ 已儲存'; msgEl.style.color = '#34d399'; }
+        setTimeout(() => { if (msgEl) msgEl.textContent = ''; }, 3000);
+    } catch (e) {
+        if (msgEl) { msgEl.textContent = '❌ ' + e.message; msgEl.style.color = '#f43f5e'; }
+    }
+}
+
+document.addEventListener('click', async e => {
+    const navItem = e.target.closest('.nav-item');
+    if (navItem?.dataset?.page === 'settings') setTimeout(loadAlertKeywords, 100);
+    if (e.target.id === 'alert-add-btn') {
+        const input = document.getElementById('alert-input');
+        const kw = (input?.value || '').trim();
+        if (kw && !alertKeywords.includes(kw)) alertKeywords.push(kw);
+        if (input && kw) { input.value = ''; renderAlertTags(); }
+    }
+    if (e.target.id === 'alert-save-btn') saveAlertKeywords();
+});
+document.addEventListener('keydown', e => {
+    if (e.target.id === 'alert-input' && e.key === 'Enter')
+        document.getElementById('alert-add-btn')?.click();
+});

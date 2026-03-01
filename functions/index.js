@@ -12,6 +12,7 @@ const db = admin.firestore();
 // 定義 GCP Secret Manager 中的 Secrets
 const lineChannelAccessToken = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 const lineUserId = defineSecret('LINE_USER_ID');
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // 部署至亞太區域
 setGlobalOptions({ region: 'asia-northeast1' });
@@ -25,8 +26,7 @@ const ADMIN_EMAILS = [
 async function checkAdmin(request) {
     if (!request.auth) throw new HttpsError('unauthenticated', '請先登入。');
     const email = request.auth.token?.email || '';
-    if (ADMIN_EMAILS.includes(email)) return; // email 白名單直接通過
-    // 備用：讀 Firestore config/admins 動態清單
+    if (ADMIN_EMAILS.includes(email)) return;
     try {
         const snap = await db.doc('config/admins').get();
         if (snap.exists) {
@@ -34,20 +34,16 @@ async function checkAdmin(request) {
             if (emails.includes(email)) return;
         }
     } catch (_) { }
-    // 最後：檢查 Custom Claim
     const user = await admin.auth().getUser(request.auth.uid);
     if (user.customClaims?.admin !== true) {
         throw new HttpsError('permission-denied', '僅限管理員。');
     }
 }
 
-// ─── askGemini：前端 Callable，安全呼叫 Gemini API ───────────────────
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
-
+// ─── askGemini：前端 Callable，安全呼叫 Gemini API ───────────────────────────
 exports.askGemini = onCall(
-    { secrets: [geminiApiKey], region: 'asia-northeast1' },
+    { secrets: [geminiApiKey, lineChannelAccessToken, lineUserId], region: 'asia-northeast1' },
     async (request) => {
-        // 驗證使用者必須登入
         if (!request.auth) {
             throw new HttpsError('unauthenticated', '請先登入才能使用 AI 客服。');
         }
@@ -79,7 +75,6 @@ exports.askGemini = onCall(
             throw new HttpsError('invalid-argument', 'prompt 不可為空。');
         }
 
-        // 限制輸入長度，防止濫用
         const safePrompt = prompt.trim().slice(0, 1000);
         const safeKnowledge = knowledge.slice(0, 8000);
 
@@ -97,6 +92,51 @@ exports.askGemini = onCall(
         try {
             const result = await model.generateContent(fullPrompt);
             const text = result.response.text();
+
+            // ── 告警關鍵字比對 ──
+            try {
+                const alertSnap = await db.doc('config/alerts').get();
+                const alertKeywords = alertSnap.exists ? (alertSnap.data().keywords || []) : [];
+                const matched = alertKeywords.filter(kw =>
+                    kw && safePrompt.toLowerCase().includes(kw.toLowerCase())
+                );
+                if (matched.length > 0) {
+                    const token = lineChannelAccessToken.value().trim();
+                    const userId = lineUserId.value().trim();
+                    if (token && userId) {
+                        const alertMsg = {
+                            type: 'flex',
+                            altText: `⚠️ 石門小智鈴告警：偵測到敏感關鍵字`,
+                            contents: {
+                                type: 'bubble',
+                                header: {
+                                    type: 'box', layout: 'vertical',
+                                    backgroundColor: '#ef4444', paddingAll: '14px',
+                                    contents: [{ type: 'text', text: '⚠️ 關鍵字告警', color: '#fff', weight: 'bold', size: 'md' }]
+                                },
+                                body: {
+                                    type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '14px',
+                                    contents: [
+                                        { type: 'text', text: `命中關鍵字：${matched.join('、')}`, color: '#dc2626', weight: 'bold', wrap: true },
+                                        { type: 'separator', margin: 'sm' },
+                                        { type: 'text', text: `問題內容：${safePrompt.substring(0, 120)}`, size: 'sm', color: '#374151', wrap: true },
+                                        { type: 'text', text: `使用者：${request.auth.token?.email || request.auth.uid}`, size: 'xs', color: '#6b7280', wrap: true }
+                                    ]
+                                }
+                            }
+                        };
+                        await axios.post(
+                            'https://api.line.me/v2/bot/message/push',
+                            { to: userId, messages: [alertMsg] },
+                            { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+                        );
+                        console.log(`⚠️ 告警推送：${matched.join(',')}`);
+                    }
+                }
+            } catch (alertErr) {
+                console.error('告警推送失敗（不影響主要流程）:', alertErr.message);
+            }
+
             return { text, usedCount: usedCount + 1, dailyLimit: DAILY_LIMIT };
         } catch (err) {
             const msg = String(err?.message || '');
@@ -108,7 +148,7 @@ exports.askGemini = onCall(
     }
 );
 
-// ─── setAdmin：設定管理員（僅限白名單管理員）─────────────────────────────────
+// ─── setAdmin：設定管理員（僅限白名單管理員）────────────────────────────────
 exports.setAdmin = onCall(
     { region: 'asia-northeast1' },
     async (request) => {
@@ -122,7 +162,7 @@ exports.setAdmin = onCall(
     }
 );
 
-// ─── getKnowledgeBase：讀取知識庫（admin only）────────────────────────────────
+// ─── getKnowledgeBase：讀取知識庫（admin only）──────────────────────────────
 exports.getKnowledgeBase = onCall(
     { region: 'asia-northeast1' },
     async (request) => {
@@ -133,16 +173,26 @@ exports.getKnowledgeBase = onCall(
     }
 );
 
-// ─── updateKnowledgeBase：更新知識庫（admin only）────────────────────────────
+// ─── updateKnowledgeBase：更新知識庫並保留版本快照（admin only）──────────────
 exports.updateKnowledgeBase = onCall(
     { region: 'asia-northeast1' },
     async (request) => {
         await checkAdmin(request);
         const content = request.data?.content;
         if (typeof content !== 'string') throw new HttpsError('invalid-argument', '內容格式錯誤。');
+        // 儲存前先快照
+        try {
+            const mainSnap = await db.doc('config/knowledgeBase').get();
+            if (mainSnap.exists) {
+                const old = mainSnap.data().content || '';
+                await db.doc(`knowledge/history/${Date.now()}`).set({
+                    content: old, savedAt: new Date().toISOString(),
+                    charCount: old.length, savedBy: request.auth.token.email || request.auth.uid,
+                });
+            }
+        } catch (e) { console.warn('快照失敗:', e.message); }
         await db.doc('config/knowledgeBase').set({
-            content,
-            updatedAt: new Date().toISOString(),
+            content, updatedAt: new Date().toISOString(),
             updatedBy: request.auth.token.email || request.auth.uid,
         });
         console.log(`✅ 知識庫已更新，長度：${content.length} 字`);
@@ -150,74 +200,107 @@ exports.updateKnowledgeBase = onCall(
     }
 );
 
-// ─── getAdminStats：取得使用統計（admin only）────────────────────────────────
+// ─── getKnowledgeHistory：取得版本歷史清單（admin only）──────────────────────
+exports.getKnowledgeHistory = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        await checkAdmin(request);
+        const snap = await db.collection('knowledge/history').orderBy('savedAt', 'desc').limit(20).get();
+        return {
+            versions: snap.docs.map(d => ({
+                id: d.id, savedAt: d.data().savedAt,
+                charCount: d.data().charCount, savedBy: d.data().savedBy || '',
+            }))
+        };
+    }
+);
+
+// ─── restoreKnowledgeVersion：回復指定版本（admin only）──────────────────────
+exports.restoreKnowledgeVersion = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        await checkAdmin(request);
+        const { versionId } = request.data;
+        if (!versionId) throw new HttpsError('invalid-argument', 'versionId 為必填。');
+        const snap = await db.doc(`knowledge/history/${versionId}`).get();
+        if (!snap.exists) throw new HttpsError('not-found', '找不到該版本。');
+        await db.doc('config/knowledgeBase').set({
+            content: snap.data().content, updatedAt: new Date().toISOString(),
+            updatedBy: `restore:${request.auth.token.email || request.auth.uid}`,
+        });
+        return { success: true, content: snap.data().content };
+    }
+);
+
+// ─── getAlertKeywords：取得告警關鍵字（admin only）────────────────────────────
+exports.getAlertKeywords = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        await checkAdmin(request);
+        const snap = await db.doc('config/alerts').get();
+        return { keywords: snap.exists ? (snap.data().keywords || []) : [] };
+    }
+);
+
+// ─── setAlertKeywords：設定告警關鍵字（admin only）────────────────────────────
+exports.setAlertKeywords = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        await checkAdmin(request);
+        const { keywords } = request.data;
+        if (!Array.isArray(keywords)) throw new HttpsError('invalid-argument', 'keywords 必須為陣列。');
+        await db.doc('config/alerts').set({ keywords, updatedAt: new Date().toISOString() });
+        console.log(`✅ 告警關鍵字已更新：${keywords.join('、')}`);
+        return { ok: true };
+    }
+);
+
+// ─── getAdminStats：取得使用統計（admin only，支援 days 參數）──────────────
 exports.getAdminStats = onCall(
     { region: 'asia-northeast1' },
     async (request) => {
         await checkAdmin(request);
-
-        // 讀取所有使用者的對話（chats collection）
+        const days = Number(request.data?.days) || 7;
         const chatsSnap = await db.collection('chats').get();
         const allChats = [];
         chatsSnap.forEach(doc => {
-            const data = doc.data();
-            const history = Array.isArray(data.history) ? data.history : [];
-            history.forEach(h => {
+            const d = doc.data();
+            (Array.isArray(d.history) ? d.history : []).forEach(h => {
                 allChats.push({
-                    uid: doc.id,
-                    userName: h.userName || '訪客',
-                    userEmail: h.userEmail || '',
-                    user: h.user || '',
-                    ai: h.ai || '',
-                    time: h.time || null,
+                    uid: doc.id, userName: h.userName || '訪客',
+                    userEmail: h.userEmail || '', user: h.user || '',
+                    ai: h.ai || '', time: h.time || null,
                 });
             });
         });
-
-        // 熱門問題：簡單統計關鍵字
         const questionWords = {};
         allChats.forEach(c => {
-            const words = c.user.split(/[\s，。？！、,. ]+/).filter(w => w.length >= 2 && w.length <= 10);
-            words.forEach(w => { questionWords[w] = (questionWords[w] || 0) + 1; });
+            c.user.split(/[\s，。？！、,. ]+/).filter(w => w.length >= 2 && w.length <= 10)
+                .forEach(w => { questionWords[w] = (questionWords[w] || 0) + 1; });
         });
-        const topKeywords = Object.entries(questionWords)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10)
-            .map(([word, count]) => ({ word, count }));
-
-        // 今日活躍人數（從已讀取的 chats 計算，不需額外 Index）
-        const todayPrefix = new Date().toISOString().slice(0, 10); // e.g. "2026-03-01"
+        const topKeywords = Object.entries(questionWords).sort((a, b) => b[1] - a[1])
+            .slice(0, 10).map(([word, count]) => ({ word, count }));
+        const todayPrefix = new Date().toISOString().slice(0, 10);
         const todayActiveUsers = new Set();
         allChats.forEach(c => {
-            if (c.time && String(c.time).startsWith(todayPrefix)) {
-                todayActiveUsers.add(c.uid);
-            }
+            if (c.time && String(c.time).startsWith(todayPrefix)) todayActiveUsers.add(c.uid);
         });
-
-        // 計算 7 天每日問答量
+        const trendDays = days === 0 ? 30 : days;
         const dailyTrend = {};
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            dailyTrend[d.toISOString().slice(0, 10)] = 0;
+        for (let i = trendDays - 1; i >= 0; i--) {
+            const d2 = new Date(); d2.setDate(d2.getDate() - i);
+            dailyTrend[d2.toISOString().slice(0, 10)] = 0;
         }
         allChats.forEach(c => {
             const day = c.time ? String(c.time).slice(0, 10) : null;
             if (day && dailyTrend[day] !== undefined) dailyTrend[day]++;
         });
-
-        // 計算登入 vs 訪客比例
         let anonCount = 0, authCount = 0;
         allChats.forEach(c => { c.userEmail ? authCount++ : anonCount++; });
-
         return {
-            totalMessages: allChats.length,
-            totalUsers: chatsSnap.size,
-            todayActiveUsers: todayActiveUsers.size,
-            topKeywords,
-            dailyTrend,
-            anonCount,
-            authCount,
+            totalMessages: allChats.length, totalUsers: chatsSnap.size,
+            todayActiveUsers: todayActiveUsers.size, topKeywords,
+            dailyTrend, anonCount, authCount,
             recentChats: allChats.sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 50),
         };
     }
@@ -308,7 +391,7 @@ exports.notifyLineOnNewChat = onDocumentUpdated(
 
         console.log(`準備發送 LINE 通知：user=${userName}, question=${question.substring(0, 30)}...`);
 
-        // ── LINE Flex Message 卡片（扁平化 JSON，避免條件式展開） ──
+        // ── LINE Flex Message 卡片 ──
         const flexMessage = {
             type: 'flex',
             altText: `🔔 石門小智鈴：${userName} 有新提問`,
@@ -316,158 +399,59 @@ exports.notifyLineOnNewChat = onDocumentUpdated(
                 type: 'bubble',
                 size: 'giga',
                 header: {
-                    type: 'box',
-                    layout: 'vertical',
-                    paddingAll: '16px',
+                    type: 'box', layout: 'vertical', paddingAll: '16px',
                     backgroundColor: '#4F46E5',
                     contents: [
                         {
-                            type: 'box',
-                            layout: 'horizontal',
+                            type: 'box', layout: 'horizontal',
                             contents: [
-                                {
-                                    type: 'text',
-                                    text: '🔔 石門小智鈴 AI 客服',
-                                    color: '#FFFFFF',
-                                    size: 'md',
-                                    weight: 'bold',
-                                    flex: 1
-                                },
-                                {
-                                    type: 'text',
-                                    text: '新動態',
-                                    color: '#A5B4FC',
-                                    size: 'sm',
-                                    align: 'end',
-                                    flex: 0
-                                }
+                                { type: 'text', text: '🔔 石門小智鈴 AI 客服', color: '#FFFFFF', size: 'md', weight: 'bold', flex: 1 },
+                                { type: 'text', text: '新動態', color: '#A5B4FC', size: 'sm', align: 'end', flex: 0 }
                             ]
                         },
-                        {
-                            type: 'text',
-                            text: `⏰ ${time}`,
-                            color: '#C7D2FE',
-                            size: 'xs',
-                            margin: 'sm'
-                        }
+                        { type: 'text', text: `⏰ ${time}`, color: '#C7D2FE', size: 'xs', margin: 'sm' }
                     ]
                 },
                 body: {
-                    type: 'box',
-                    layout: 'vertical',
-                    spacing: 'md',
-                    paddingAll: '16px',
+                    type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '16px',
                     contents: [
                         {
-                            type: 'box',
-                            layout: 'horizontal',
-                            backgroundColor: '#EEF2FF',
-                            cornerRadius: '10px',
-                            paddingAll: '10px',
+                            type: 'box', layout: 'horizontal', backgroundColor: '#EEF2FF',
+                            cornerRadius: '10px', paddingAll: '10px',
                             contents: [
-                                {
-                                    type: 'text',
-                                    text: '👤',
-                                    size: 'xl',
-                                    flex: 0,
-                                    gravity: 'center'
-                                },
-                                {
-                                    type: 'text',
-                                    text: userInfo,
-                                    size: 'sm',
-                                    weight: 'bold',
-                                    color: '#4338CA',
-                                    flex: 1,
-                                    wrap: true,
-                                    margin: 'md'
-                                }
+                                { type: 'text', text: '👤', size: 'xl', flex: 0, gravity: 'center' },
+                                { type: 'text', text: userInfo, size: 'sm', weight: 'bold', color: '#4338CA', flex: 1, wrap: true, margin: 'md' }
                             ]
                         },
+                        { type: 'separator', margin: 'sm' },
                         {
-                            type: 'separator',
-                            margin: 'sm'
-                        },
-                        {
-                            type: 'box',
-                            layout: 'vertical',
-                            spacing: 'xs',
+                            type: 'box', layout: 'vertical', spacing: 'xs',
                             contents: [
-                                {
-                                    type: 'text',
-                                    text: '💬 提問內容',
-                                    size: 'xs',
-                                    color: '#6B7280',
-                                    weight: 'bold'
-                                },
-                                {
-                                    type: 'text',
-                                    text: question,
-                                    size: 'sm',
-                                    color: '#111827',
-                                    wrap: true,
-                                    weight: 'bold'
-                                }
+                                { type: 'text', text: '💬 提問內容', size: 'xs', color: '#6B7280', weight: 'bold' },
+                                { type: 'text', text: question, size: 'sm', color: '#111827', wrap: true, weight: 'bold' }
                             ]
                         },
+                        { type: 'separator', margin: 'sm' },
                         {
-                            type: 'separator',
-                            margin: 'sm'
-                        },
-                        {
-                            type: 'box',
-                            layout: 'vertical',
-                            spacing: 'xs',
-                            backgroundColor: '#F0FDF4',
-                            cornerRadius: '8px',
-                            paddingAll: '10px',
+                            type: 'box', layout: 'vertical', spacing: 'xs',
+                            backgroundColor: '#F0FDF4', cornerRadius: '8px', paddingAll: '10px',
                             contents: [
-                                {
-                                    type: 'text',
-                                    text: '🤖 AI 回答摘要',
-                                    size: 'xs',
-                                    color: '#059669',
-                                    weight: 'bold'
-                                },
-                                {
-                                    type: 'text',
-                                    text: answer,
-                                    size: 'sm',
-                                    color: '#374151',
-                                    wrap: true
-                                }
+                                { type: 'text', text: '🤖 AI 回答摘要', size: 'xs', color: '#059669', weight: 'bold' },
+                                { type: 'text', text: answer, size: 'sm', color: '#374151', wrap: true }
                             ]
                         }
                     ]
                 },
                 footer: {
-                    type: 'box',
-                    layout: 'horizontal',
-                    paddingAll: '12px',
-                    spacing: 'sm',
+                    type: 'box', layout: 'horizontal', paddingAll: '12px', spacing: 'sm',
                     contents: [
                         {
-                            type: 'button',
-                            style: 'primary',
-                            color: '#4F46E5',
-                            height: 'sm',
-                            action: {
-                                type: 'uri',
-                                label: '🖥️ 查看系統',
-                                uri: 'https://cagoooo.github.io/smes/'
-                            },
-                            flex: 1
+                            type: 'button', style: 'primary', color: '#4F46E5', height: 'sm', flex: 1,
+                            action: { type: 'uri', label: '🖥️ 查看系統', uri: 'https://cagoooo.github.io/smes/' }
                         },
                         {
-                            type: 'button',
-                            style: 'secondary',
-                            height: 'sm',
-                            action: {
-                                type: 'uri',
-                                label: '📊 Firebase Console',
-                                uri: 'https://console.firebase.google.com/project/smes-e1dc3/firestore'
-                            },
-                            flex: 1
+                            type: 'button', style: 'secondary', height: 'sm', flex: 1,
+                            action: { type: 'uri', label: '📊 Firebase Console', uri: 'https://console.firebase.google.com/project/smes-e1dc3/firestore' }
                         }
                     ]
                 }
