@@ -21,7 +21,10 @@ jobs:
           cache: 'npm'
 
       - name: 📦 安裝依賴
-        run: npm install
+        run: npm ci
+
+      - name: 🔑 設定 vite 執行權限
+        run: chmod +x node_modules/.bin/vite
 
       - name: 🏗️ 建立正式版本
         run: npx vite build
