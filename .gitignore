@@ -67,3 +67,6 @@ conversations.json
 node_modules/
 functions/node_modules/
 dist/
+
+# Firebase Functions 環境變數（含 LINE Token 等敏感資訊）
+functions/.env.*
