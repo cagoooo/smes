@@ -195,11 +195,11 @@ function renderStats(data) {
     <div class="chart-row">
       <div class="chart-card">
         <h4>📈 近 7 天問答趨勢</h4>
-        <canvas id="chart-trend" height="160"></canvas>
+        <canvas id="chart-trend" height="200"></canvas>
       </div>
       <div class="chart-card">
         <h4>🧩 使用者類型</h4>
-        <canvas id="chart-pie" height="160"></canvas>
+        <canvas id="chart-pie" height="200"></canvas>
       </div>
     </div>
     <div class="keyword-section">
