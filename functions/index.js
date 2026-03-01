@@ -194,13 +194,54 @@ exports.getAdminStats = onCall(
             }
         });
 
+        // 計算 7 天每日問答量
+        const dailyTrend = {};
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            dailyTrend[d.toISOString().slice(0, 10)] = 0;
+        }
+        allChats.forEach(c => {
+            const day = c.time ? String(c.time).slice(0, 10) : null;
+            if (day && dailyTrend[day] !== undefined) dailyTrend[day]++;
+        });
+
+        // 計算登入 vs 訪客比例
+        let anonCount = 0, authCount = 0;
+        allChats.forEach(c => { c.userEmail ? authCount++ : anonCount++; });
+
         return {
             totalMessages: allChats.length,
             totalUsers: chatsSnap.size,
             todayActiveUsers: todayActiveUsers.size,
             topKeywords,
+            dailyTrend,
+            anonCount,
+            authCount,
             recentChats: allChats.sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 50),
         };
+    }
+);
+
+// ─── deleteUserChat：刪除單筆對話（admin only）──────────────────────────────
+exports.deleteUserChat = onCall(
+    { region: 'asia-northeast1' },
+    async (request) => {
+        await checkAdmin(request);
+        const { uid, time } = request.data;
+        if (!uid || time === undefined) {
+            throw new HttpsError('invalid-argument', 'uid 與 time 為必填。');
+        }
+        const docRef = db.doc(`chats/${uid}`);
+        const snap = await docRef.get();
+        if (!snap.exists) throw new HttpsError('not-found', '找不到該使用者記錄。');
+        const history = snap.data().history || [];
+        const newHistory = history.filter(h => h.time !== time);
+        if (newHistory.length === history.length) {
+            throw new HttpsError('not-found', '找不到該筆對話。');
+        }
+        await docRef.update({ history: newHistory });
+        return { message: `已刪除 1 筆對話記錄。` };
     }
 );
 

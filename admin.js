@@ -23,6 +23,7 @@ const getAdminStatsFn = httpsCallable(fns, 'getAdminStats');
 const getKnowledgeBaseFn = httpsCallable(fns, 'getKnowledgeBase');
 const updateKnowledgeBaseFn = httpsCallable(fns, 'updateKnowledgeBase');
 const setAdminFn = httpsCallable(fns, 'setAdmin');
+const deleteUserChatFn = httpsCallable(fns, 'deleteUserChat');
 
 // ── State ──────────────────────────────────────────────────────
 let statsCache = null;
@@ -191,6 +192,16 @@ function renderStats(data) {
         <div class="stat-sub">${today}</div>
       </div>
     </div>
+    <div class="chart-row">
+      <div class="chart-card">
+        <h4>📈 近 7 天問答趨勢</h4>
+        <canvas id="chart-trend" height="160"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>🧩 使用者類型</h4>
+        <canvas id="chart-pie" height="160"></canvas>
+      </div>
+    </div>
     <div class="keyword-section">
       <h3>🏆 熱門關鍵字 TOP ${data.topKeywords.length}</h3>
       <div class="keyword-bars">${kwBars}</div>
@@ -215,7 +226,67 @@ function renderStats(data) {
         document.querySelectorAll('.keyword-bar-fill').forEach(bar => {
             bar.style.width = bar.dataset.pct + '%';
         });
+        renderCharts(data);
     }, 100);
+}
+
+// ── Chart.js 圖表渲染 ───────────────────────────────────
+let chartTrend = null, chartPie = null;
+
+function renderCharts(data) {
+    if (typeof Chart === 'undefined') return;
+
+    Chart.defaults.color = 'rgba(255,255,255,0.5)';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+
+    // 折線圖：7 天趨勢
+    const trendCtx = document.getElementById('chart-trend');
+    if (trendCtx) {
+        if (chartTrend) chartTrend.destroy();
+        const labels = Object.keys(data.dailyTrend || {}).sort();
+        const values = labels.map(d => (data.dailyTrend || {})[d] || 0);
+        chartTrend = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: labels.map(d => d.slice(5)),
+                datasets: [{
+                    label: '問答次數', data: values,
+                    borderColor: '#818cf8', backgroundColor: 'rgba(129,140,248,0.15)',
+                    fill: true, tension: 0.4, pointRadius: 4,
+                    pointBackgroundColor: '#818cf8', pointBorderWidth: 0
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { font: { size: 11 }, stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+                },
+                maintainAspectRatio: false,
+            }
+        });
+    }
+
+    // 甜甜圈圖：登入 vs 訪客
+    const pieCtx = document.getElementById('chart-pie');
+    if (pieCtx) {
+        if (chartPie) chartPie.destroy();
+        chartPie = new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['登入用戶', '訪客'],
+                datasets: [{
+                    data: [data.authCount || 0, data.anonCount || 0],
+                    backgroundColor: ['#818cf8', '#f472b6'], borderWidth: 0
+                }]
+            },
+            options: {
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } } },
+                maintainAspectRatio: false,
+                cutout: '62%'
+            }
+        });
+    }
 }
 
 
@@ -259,6 +330,17 @@ function updateRecordTable(chats) {
               <div class="user-email">${escapeHtml(c.userEmail || '匿名使用者')}</div>
             </div>
             <div class="time-chip">${timeStr}</div>
+            <button class="chat-delete-btn"
+              data-uid="${escapeHtml(c.uid)}"
+              data-time="${escapeHtml(c.time || '')}"
+              title="刪除此筆記錄">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
           </div>
           <div class="chat-q">
             <div class="q-label">問 Q</div>
@@ -283,10 +365,66 @@ document.getElementById('search-input').addEventListener('input', function () {
         (c.userName || '').toLowerCase().includes(q) ||
         (c.userEmail || '').toLowerCase().includes(q) ||
         (c.user || '').toLowerCase().includes(q) ||
-        (c.ai || '').toLowerCase().includes(q)   // 包含 AI 回答
+        (c.ai || '').toLowerCase().includes(q)
     );
     updateRecordTable(filtered);
 });
+
+// ── 刪除單筆對話（事件委派） ──────────────────────────────
+document.getElementById('records-content').addEventListener('click', function (e) {
+    const btn = e.target.closest('.chat-delete-btn');
+    if (!btn) return;
+    const uid = btn.dataset.uid;
+    const time = btn.dataset.time;
+    customConfirm({
+        icon: '🗑️',
+        title: '刪除對話記錄',
+        message: '確定要永久刪除此筆對話吗？此操作無法復原。',
+        confirmText: '刪除',
+        confirmGradient: 'linear-gradient(135deg,#f43f5e,#be123c)',
+        onConfirm: async () => {
+            btn.disabled = true;
+            const svg = btn.querySelector('svg');
+            if (svg) svg.style.opacity = '0.3';
+            try {
+                await deleteUserChatFn({ uid, time });
+                allChats = allChats.filter(c => !(c.uid === uid && c.time === time));
+                updateRecordTable(allChats);
+            } catch (err) {
+                alert('刪除失敗：' + err.message);
+                btn.disabled = false;
+                if (svg) svg.style.opacity = '1';
+            }
+        },
+    });
+});
+
+// ── 匯出 CSV ──────────────────────────────────────────
+
+function exportCSV() {
+    if (allChats.length === 0) return;
+    const header = '時間,使用者,Email,問題,AI 回答';
+    const rows = allChats.map(c => [
+        c.time ? new Date(c.time).toLocaleString('zh-TW') : '',
+        `"${(c.userName || '').replace(/"/g, '""')}"`,
+        `"${(c.userEmail || '').replace(/"/g, '""')}"`,
+        `"${(c.user || '').replace(/"/g, '""')}"`,
+        `"${(c.ai || '').replace(/"/g, '""')}"`,
+    ].join(','));
+    const csv = '\uFEFF' + [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `對話記錄_${new Date().toLocaleDateString('zh-TW').replace(/\//g, '-')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+const exportCsvBtn = document.getElementById('export-csv-btn');
+if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportCSV);
 
 // ── 知識庫 ────────────────────────────────────────────────────
 const kbEditor = document.getElementById('kb-editor');
