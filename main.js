@@ -1,13 +1,56 @@
 import './style.css'
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-// 初始化 Gemini
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(API_KEY);
+// ══════════════════════════════
+//  自訂確認 Modal（取代原生 confirm）
+// ══════════════════════════════
+function showConfirm({ icon = '🔔', title = '確認操作', message = '確定要執行此操作嗎？', confirmVariant = '' } = {}) {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('custom-modal-overlay');
+        const iconEl = document.getElementById('modal-icon');
+        const titleEl = document.getElementById('modal-title');
+        const msgEl = document.getElementById('modal-message');
+        const confirmBtn = document.getElementById('modal-confirm-btn');
+        const cancelBtn = document.getElementById('modal-cancel-btn');
+
+        iconEl.textContent = icon;
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+
+        // 根據 variant 切換按鈕顏色
+        if (confirmVariant === 'logout') {
+            confirmBtn.classList.add('logout-variant');
+        } else {
+            confirmBtn.classList.remove('logout-variant');
+        }
+
+        // 顯示
+        requestAnimationFrame(() => {
+            overlay.classList.add('modal-show');
+        });
+
+        function close(result) {
+            overlay.classList.remove('modal-show');
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            overlay.removeEventListener('click', onOverlay);
+            resolve(result);
+        }
+
+        function onConfirm() { close(true); }
+        function onCancel() { close(false); }
+        function onOverlay(e) { if (e.target === overlay) close(false); }
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlay);
+    });
+}
+
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -23,12 +66,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app, 'asia-northeast1');  // 指定正確地區
+const askGeminiFn = httpsCallable(functions, 'askGemini'); // Callable 參照
 
-// Gemini Model Configuration
-const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-lite",
-    systemInstruction: "你是由阿凱老師設計的桃園市石門國小資訊組 AI 客服『石門小智鈴』。請根據提供的知識庫內容，友善、專業地回答使用者的問題。如果問題不在知識庫中，請禮貌地告知並引導至相關單位。",
-});
 
 // 知識庫載入
 let knowledgeBase = "";
@@ -163,7 +203,12 @@ function updateChatUI() {
 
 // 清除對話（全域函式，供 HTML onclick 呼叫）
 window.clearHistory = async function () {
-    if (!confirm('確定要清除所有對話嗎？此操作無法復原。')) return;
+    const ok = await showConfirm({
+        icon: '🗑️',
+        title: '清除所有對話',
+        message: '確定要清除所有對話嗎？此操作無法復原。',
+    });
+    if (!ok) return;
     conversations = [];
     const chatList = getChatList();
     if (chatList) chatList.innerHTML = '';
@@ -229,28 +274,24 @@ function addMessageToUI(userQuestion, aiAnswer, isNew = true, convTime = null) {
 }
 
 async function askGemini(prompt, retries = 3) {
-    const fullPrompt = `知識庫：\n${knowledgeBase}\n\n使用者問題：${prompt}`;
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-            const result = await model.generateContent(fullPrompt);
-            const response = await result.response;
-            return response.text();
+            const result = await askGeminiFn({ prompt, knowledge: knowledgeBase });
+            return result.data.text;
         } catch (error) {
-            const status = error?.status || error?.message || '';
-            const isRetryable = String(status).includes('503') || String(status).includes('429')
-                || String(error?.message).includes('503') || String(error?.message).includes('429');
+            const code = error?.code || '';
+            const msg = String(error?.message || '');
+            const isRetryable = code === 'functions/unavailable' || code === 'functions/resource-exhausted'
+                || msg.includes('503') || msg.includes('429');
             if (isRetryable && attempt < retries) {
-                const wait = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-                console.warn(`Gemini ${status} 第 ${attempt} 次重試，等待 ${wait / 1000}s...`);
-                // 更新 UI 提示
+                const wait = Math.pow(2, attempt) * 1000;
+                console.warn(`Gemini ${code} 第 ${attempt} 次重試，等待 ${wait / 1000}s...`);
                 const thinking = document.querySelector('.blink.green-text');
                 if (thinking) thinking.textContent = `⏳ AI 服務忙碌，第 ${attempt} 次重試中（${wait / 1000}s）...`;
                 await new Promise(r => setTimeout(r, wait));
             } else {
-                console.error('Gemini Error:', error);
-                if (String(status).includes('503') || String(error?.message).includes('503')) {
-                    return '⚠️ AI 服務目前流量過高，請稍候片刻再試一次。';
-                }
+                console.error('askGemini Error:', error);
+                if (code === 'functions/unavailable' || msg.includes('503')) return '⚠️ AI 服務目前流量過高，請稍候片刻再試一次。';
                 return '抱歉，目前無法處理您的請求。請稍後再試。';
             }
         }
@@ -262,11 +303,6 @@ async function handleSend() {
     if (!userInput) return;
     const prompt = userInput.value.trim();
     if (!prompt) return;
-
-    if (!API_KEY) {
-        alert('請先在 .env 設定 VITE_GEMINI_API_KEY');
-        return;
-    }
 
     userInput.value = '';
     userInput.style.height = 'auto';
@@ -432,7 +468,13 @@ window.googleLogin = async function () {
 
 // ── 全域函式：登出 ──
 window.googleLogout = async function () {
-    if (!confirm('確定要登出嗎？')) return;
+    const ok = await showConfirm({
+        icon: '👋',
+        title: '確認登出',
+        message: '確定要登出帳號嗎？',
+        confirmVariant: 'logout',
+    });
+    if (!ok) return;
     conversations = [];
     const chatList = getChatList();
     if (chatList) chatList.innerHTML = '';

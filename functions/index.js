@@ -1,6 +1,8 @@
 const { onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const { defineSecret } = require('firebase-functions/params');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 
 // 定義 GCP Secret Manager 中的 Secrets
@@ -9,6 +11,53 @@ const lineUserId = defineSecret('LINE_USER_ID');
 
 // 部署至亞太區域
 setGlobalOptions({ region: 'asia-northeast1' });
+
+// ─── askGemini：前端 Callable，安全呼叫 Gemini API ───────────────────
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
+exports.askGemini = onCall(
+    { secrets: [geminiApiKey], region: 'asia-northeast1' },
+    async (request) => {
+        // 驗證使用者必須登入
+        if (!request.auth) {
+            throw new HttpsError('unauthenticated', '請先登入才能使用 AI 客服。');
+        }
+
+        const prompt = request.data?.prompt;
+        const knowledge = request.data?.knowledge || '';
+
+        if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+            throw new HttpsError('invalid-argument', 'prompt 不可為空。');
+        }
+
+        // 限制輸入長度，防止濫用
+        const safePrompt = prompt.trim().slice(0, 1000);
+        const safeKnowledge = knowledge.slice(0, 8000);
+
+        const key = geminiApiKey.value().trim();
+        if (!key) throw new HttpsError('internal', 'API Key 未設定。');
+
+        const genAI = new GoogleGenerativeAI(key);
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-2.5-flash-lite',
+            systemInstruction: '你是由阿凱老師設計的桃園市石門國小資訊組 AI 客服「石門小智鈴」。請根據提供的知識庫內容，友善、專業地回答使用者的問題。如果問題不在知識庫中，請禮貌地告知並引導至相關單位。',
+        });
+
+        const fullPrompt = `知識庫：\n${safeKnowledge}\n\n使用者問題：${safePrompt}`;
+
+        try {
+            const result = await model.generateContent(fullPrompt);
+            const text = result.response.text();
+            return { text };
+        } catch (err) {
+            const msg = String(err?.message || '');
+            console.error('askGemini 錯誤:', msg);
+            if (msg.includes('503')) throw new HttpsError('unavailable', '503');
+            if (msg.includes('429')) throw new HttpsError('resource-exhausted', '429');
+            throw new HttpsError('internal', '呼叫 AI 服務失敗，請稍後再試。');
+        }
+    }
+);
 
 // 移除 Markdown 語法 + HTML tag，取得純文字供 LINE 通知顯示
 function stripMarkdown(text) {
@@ -51,8 +100,8 @@ exports.notifyLineOnNewChat = onDocumentUpdated(
             return null;
         }
 
-        const token = lineChannelAccessToken.value();
-        const userId = lineUserId.value();
+        const token = lineChannelAccessToken.value().trim();
+        const userId = lineUserId.value().trim();
 
         if (!token || !userId) {
             console.error('缺少 LINE_CHANNEL_ACCESS_TOKEN 或 LINE_USER_ID');

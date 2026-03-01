@@ -133,6 +133,21 @@
         </div>
     </div>
 
+    <!-- ═══ 自訂確認 Modal（取代原生 browser confirm dialog） ═══ -->
+    <div id="custom-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="custom-modal-card">
+            <div class="modal-icon-wrap">
+                <span id="modal-icon">🔔</span>
+            </div>
+            <h3 id="modal-title" class="modal-title">確認操作</h3>
+            <p id="modal-message" class="modal-message">確定要執行此操作嗎？</p>
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="modal-btn modal-btn-cancel">✖ 取消</button>
+                <button id="modal-confirm-btn" class="modal-btn modal-btn-confirm">✔ 確定</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Service Worker 管理：本地開發解除註冊，正式環境才啟用 -->
     <script>
         if ('serviceWorker' in navigator) {
