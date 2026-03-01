@@ -75,7 +75,22 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 });
 
 // ── 登出 ──────────────────────────────────────────────────────
-document.getElementById('logout-link').addEventListener('click', () => signOut(auth));
+// ── 登出 ────────────────────────────────────────────
+function doLogout() {
+    if (typeof customConfirm === 'function') {
+        customConfirm({
+            icon: '👋',
+            title: '確認登出',
+            message: '確定要登出管理員後台嗎？',
+            confirmText: '登出',
+            confirmGradient: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+            onConfirm: () => signOut(auth),
+        });
+    } else {
+        signOut(auth);
+    }
+}
+document.getElementById('logout-link').addEventListener('click', doLogout);
 
 // ── 顯示/隱藏登入遮罩 ─────────────────────────────────────────
 function showLoginScreen() {
@@ -98,19 +113,38 @@ document.querySelectorAll('.nav-item').forEach(item => {
         if (item.dataset.page === 'knowledge' && !document.getElementById('kb-editor').value) {
             loadKnowledgeBase();
         }
+        // 切換離開知識庫頁時，若有未儲存變更則提示
+        if (kbDirty && item.dataset.page !== 'knowledge') {
+            if (typeof customConfirm === 'function') {
+                customConfirm({
+                    icon: '⚠️',
+                    title: '有未儲存的變更',
+                    message: '知識庫尚未儲存，確定要離開吗？',
+                    confirmText: '離開不儲存',
+                    confirmGradient: 'linear-gradient(135deg,#f43f5e,#be123c)',
+                    onConfirm: () => { kbDirty = false; },
+                });
+            }
+        }
     });
 });
 
 // ── 載入統計資料 ──────────────────────────────────────────────
+let lastStatsUpdate = null;
 async function loadStats() {
+    const refreshBtn = document.getElementById('stats-refresh-btn');
+    if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.style.opacity = '0.5'; }
     try {
         const res = await getAdminStatsFn();
         statsCache = res.data;
+        lastStatsUpdate = new Date();
         renderStats(statsCache);
         renderRecords(statsCache.recentChats);
     } catch (e) {
         document.getElementById('stats-content').innerHTML =
             `<p style="color:#f43f5e">錯誤：${e.message}</p>`;
+    } finally {
+        if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.style.opacity = '1'; }
     }
 }
 
@@ -129,8 +163,14 @@ function renderStats(data) {
     }).join('');
 
     const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
+    const updatedStr = lastStatsUpdate
+        ? lastStatsUpdate.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : '--:--';
 
     document.getElementById('stats-content').innerHTML = `
+    <div class="stats-header-bar">
+      <span class="stats-update-time">⏱️ 最後更新：${updatedStr}</span>
+    </div>
     <div class="stat-grid">
       <div class="stat-card card-msg">
         <div class="stat-icon">💬</div>
@@ -240,9 +280,10 @@ document.getElementById('search-input').addEventListener('input', function () {
     const q = this.value.trim().toLowerCase();
     if (!q) { updateRecordTable(allChats); return; }
     const filtered = allChats.filter(c =>
-        c.userName.toLowerCase().includes(q) ||
-        c.userEmail.toLowerCase().includes(q) ||
-        c.user.toLowerCase().includes(q)
+        (c.userName || '').toLowerCase().includes(q) ||
+        (c.userEmail || '').toLowerCase().includes(q) ||
+        (c.user || '').toLowerCase().includes(q) ||
+        (c.ai || '').toLowerCase().includes(q)   // 包含 AI 回答
     );
     updateRecordTable(filtered);
 });
@@ -252,6 +293,7 @@ const kbEditor = document.getElementById('kb-editor');
 const kbStatus = document.getElementById('kb-status');
 const kbCharCount = document.getElementById('kb-char-count');
 const kbLineCount = document.getElementById('kb-line-count');
+let kbDirty = false; // 未儲存狀態
 
 function updateKbStats() {
     const val = kbEditor.value;
@@ -279,15 +321,25 @@ async function loadKnowledgeBase() {
     }
 }
 
-kbEditor.addEventListener('input', updateKbStats);
+kbEditor.addEventListener('input', () => {
+    updateKbStats();
+    kbDirty = true;
+    // 儲存按鈕題色提示
+    const saveBtn = document.getElementById('kb-save-btn');
+    if (saveBtn) saveBtn.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.45)';
+});
 
 
 document.getElementById('kb-save-btn').addEventListener('click', async () => {
     kbStatus.textContent = '⏳ 儲存中…';
     try {
         await updateKnowledgeBaseFn({ content: kbEditor.value });
+        kbDirty = false;
         kbStatus.textContent = '✅ 已儲存！AI 將立即使用新版本。';
         kbStatus.style.color = '#34d399';
+        // 恢復按鈕樣式
+        const saveBtn = document.getElementById('kb-save-btn');
+        if (saveBtn) saveBtn.style.boxShadow = '';
         setTimeout(() => { kbStatus.textContent = ''; kbStatus.style.color = ''; }, 4000);
     } catch (e) {
         kbStatus.textContent = '❌ 儲存失敗：' + e.message;
@@ -323,3 +375,7 @@ function escapeHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
 }
+
+// ── 統計刷新按鈕 ───────────────────────────────────────────────
+const refreshBtn = document.getElementById('stats-refresh-btn');
+if (refreshBtn) refreshBtn.addEventListener('click', loadStats);
