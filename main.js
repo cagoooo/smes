@@ -466,22 +466,20 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// 事件纁定（確保 DOM 已完全載入）
-document.addEventListener('DOMContentLoaded', () => {
-    const sendBtn = getSendBtn();
-    const userInput = getUserInput();
-    if (sendBtn) sendBtn.addEventListener('click', handleSend);
-    if (userInput) {
-        userInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-            }
-        });
-        // 自動調整輸入框高度
-        userInput.addEventListener('input', function () {
-            this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
-        });
-    }
-});
+// 事件綁定（Vite ES module 本身已 deferred，DOM 必然就緒，直接綁定即可）
+const sendBtn = getSendBtn();
+const userInput = getUserInput();
+if (sendBtn) sendBtn.addEventListener('click', handleSend);
+if (userInput) {
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+    // 自動調整輸入框高度
+    userInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+}
