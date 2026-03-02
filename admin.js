@@ -887,26 +887,44 @@ syncCustomSelect(nativeSelect?.value || 'gemini-2.5-flash-lite');
     const loginBtn = document.getElementById('login-btn');
     const loginBtnText = document.getElementById('login-btn-text');
     const loginProgress = document.getElementById('login-progress');
+    const loginBar = document.getElementById('login-progress-bar');
+    const loginIcon = document.getElementById('login-google-icon');
     const loginError = document.getElementById('login-error');
     if (!loginBtn) return;
 
-    // 覆寫原先的登入按鈕點擊（在 admin.js 中已有 signInFn）
-    // 找到原本的 click listener，補充 UI 狀態
-    loginBtn.addEventListener('click', () => {
-        // 按下後立即顯示進度
-        loginBtn.disabled = true;
-        if (loginBtnText) loginBtnText.textContent = '登入中…';
-        if (loginProgress) loginProgress.style.display = 'block';
-        if (loginError) loginError.textContent = '';
-    }, true); // capture 讓此 listener 在其他 click handlers 前觸發
-
-    // 監聽登入失敗（若 login-error 有內容，則還原按鈕狀態）
-    const observer = new MutationObserver(() => {
-        if (loginError && loginError.textContent.trim()) {
+    function setLoading(on) {
+        if (on) {
+            loginBtn.classList.add('loading');
+            loginBtn.disabled = true;
+            if (loginBtnText) loginBtnText.textContent = '登入中…';
+            if (loginIcon) loginIcon.style.opacity = '0.3';
+            if (loginProgress) {
+                loginProgress.style.display = 'block';
+                // 重啟 CSS 動畫
+                if (loginBar) {
+                    loginBar.style.animation = 'none';
+                    loginBar.offsetWidth; // reflow
+                    loginBar.style.animation = '';
+                }
+            }
+            if (loginError) loginError.textContent = '';
+        } else {
+            loginBtn.classList.remove('loading');
             loginBtn.disabled = false;
             if (loginBtnText) loginBtnText.textContent = '使用 Google 帳號登入';
+            if (loginIcon) loginIcon.style.opacity = '1';
             if (loginProgress) loginProgress.style.display = 'none';
         }
-    });
-    if (loginError) observer.observe(loginError, { childList: true, subtree: true, characterData: true });
+    }
+
+    // capture 確保在原本 signIn handler 前觸發
+    loginBtn.addEventListener('click', () => setLoading(true), true);
+
+    // 監聽 login-error：有錯誤時還原按鈕
+    if (loginError) {
+        new MutationObserver(() => {
+            if (loginError.textContent.trim()) setLoading(false);
+        }).observe(loginError, { childList: true, subtree: true, characterData: true });
+    }
 })();
+
