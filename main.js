@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+
 
 // ══════════════════════════════
 //  自訂確認 Modal（取代原生 confirm）
@@ -68,17 +68,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ── Firebase App Check（reCAPTCHA v3）── 必須在 getFunctions() 之前初始化
-const recaptchaKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-if (recaptchaKey) {
-    initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(recaptchaKey),
-        isTokenAutoRefreshEnabled: true,
-    });
-    console.log('[AppCheck] 已啟用 reCAPTCHA v3，key:', recaptchaKey.slice(0, 10) + '...');
-} else {
-    console.warn('[AppCheck] VITE_RECAPTCHA_SITE_KEY 未設定，App Check 未啟用');
-}
+
 
 const functions = getFunctions(app, 'asia-northeast1');  // 指定正確地區
 const askGeminiFn = httpsCallable(functions, 'askGemini'); // Callable 參照
