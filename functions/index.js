@@ -532,3 +532,62 @@ exports.setAiSettings = onCall(
         return { ok: true };
     }
 );
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔧 【校園報修系統專用】sendLineNotification
+// ⚠️  此 Function 由 h:\repair 修繕系統使用，請勿刪除！
+//     刪除後修繕系統的 LINE 報修通知將完全失效。
+//     如需修改，請同步更新 h:\repair\functions\index.js。
+// ═══════════════════════════════════════════════════════════════════════════
+const { onRequest } = require('firebase-functions/v2/https');
+
+exports.sendLineNotification = onRequest(
+    { region: 'us-central1' },
+    async (req, res) => {
+        // ✅ CORS headers（允許 GitHub Pages + localhost）
+        const allowedOrigins = [
+            'https://cagoooo.github.io',
+            'http://localhost:5173',
+            'http://localhost:3000',
+        ];
+        const origin = req.headers.origin;
+        res.set('Access-Control-Allow-Origin', allowedOrigins.includes(origin) ? origin : '*');
+        res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.set('Access-Control-Max-Age', '3600');
+
+        // ✅ 處理 OPTIONS preflight 請求
+        if (req.method === 'OPTIONS') {
+            res.status(204).send('');
+            return;
+        }
+        if (req.method !== 'POST') {
+            return res.status(405).json({ status: 'error', message: 'Method Not Allowed' });
+        }
+
+        try {
+            const { token, targetId, message, messages } = req.body;
+            if (!token || !targetId || (!message && !messages)) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Missing required parameters: token, targetId, and (message or messages)',
+                });
+            }
+
+            const response = await axios.post(
+                'https://api.line.me/v2/bot/message/push',
+                { to: targetId, messages: messages || [{ type: 'text', text: message }] },
+                { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } }
+            );
+            return res.status(200).json({ status: 'success', data: response.data });
+
+        } catch (error) {
+            console.error('sendLineNotification Error:', error.response ? error.response.data : error.message);
+            return res.status(500).json({
+                status: 'error',
+                message: error.message,
+                details: error.response ? error.response.data : null,
+            });
+        }
+    }
+);

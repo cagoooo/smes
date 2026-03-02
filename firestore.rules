@@ -2,25 +2,125 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 使用者只能讀寫「自己的」對話記錄
+    // ============================
+    // 🔧 共用輔助函式（修繕系統）
+    // ============================
+
+    function isRepairAdmin() {
+      return request.auth != null && (
+        request.auth.token.email in ['ipad@mail2.smes.tyc.edu.tw'] ||
+        (
+          exists(/databases/$(database)/documents/system/adminConfig) &&
+          request.auth.token.email in get(/databases/$(database)/documents/system/adminConfig).data.emails
+        )
+      );
+    }
+
+    // ============================
+    // 👤 【修繕系統】管理員設定
+    // ============================
+    match /system/adminConfig {
+      allow read: if true;
+      allow write: if isRepairAdmin();
+    }
+
+    // ============================
+    // 📋 【修繕系統】地圖設定
+    // ============================
+    match /system/mapConfig {
+      allow read: if true;
+      allow write: if isRepairAdmin();
+    }
+
+    // ============================
+    // 🔔 【修繕系統】通知設定
+    // ============================
+    match /system/notificationConfig {
+      allow read: if true;
+      allow write: if isRepairAdmin();
+    }
+
+    // ============================
+    // 🔧 【修繕系統】報修單
+    // ============================
+    match /repairs/{repairId} {
+      allow read: if true;
+      allow create: if isValidRepair(request.resource.data);
+      allow update: if isRepairAdmin() || (
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'cancelled' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+      );
+      allow delete: if isRepairAdmin();
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isRepairAdmin()
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500;
+        allow update, delete: if isRepairAdmin();
+      }
+    }
+
+    // ============================
+    // ✅ 【修繕系統】報修單欄位驗證函式
+    // ============================
+    function isValidRepair(data) {
+      return data.keys().hasAll([
+        'roomId', 'roomCode', 'roomName',
+        'category', 'itemType', 'description',
+        'priority', 'reporterName', 'status', 'createdAt'
+      ])
+      && data.roomId is string
+      && data.category is string
+      && data.description is string
+      && data.reporterName is string
+      && data.priority is string
+      && data.status is string
+      && data.description.size() > 0
+      && data.description.size() <= 1000
+      && data.reporterName.size() > 0
+      && data.reporterName.size() <= 50
+      && data.priority in ['low', 'normal', 'high', 'urgent']
+      && data.status == 'pending'
+      && data.category in ['IT', 'GENERAL'];
+    }
+
+    // ============================
+    // 🤖 【AI 客服系統】使用者對話記錄
+    // ============================
     match /chats/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // 知識庫：所有登入者可讀（AI 客服需要），只有後端 Function 可寫（write: false）
+    // ============================
+    // 📚 【AI 客服系統】知識庫
+    // ============================
     match /knowledge/{doc} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // 管理員設定：只允許後端 Function 讀寫（前端完全禁止）
+    // ============================
+    // ⚙️ 【AI 客服系統】管理員設定
+    // ============================
     match /config/{doc} {
       allow read, write: if false;
     }
 
-    // 使用量統計：只能讀寫自己的
+    // ============================
+    // 📊 【AI 客服系統】使用量統計
+    // ============================
     match /usage/{uid}/{rest=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ============================
+    // 🚫 預設拒絕（安全兜底）
+    // ============================
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
