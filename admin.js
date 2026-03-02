@@ -713,7 +713,11 @@ async function loadAiSettings() {
         const tempEl = document.getElementById('ai-temp');
         const tempValEl = document.getElementById('ai-temp-val');
         const tokensEl = document.getElementById('ai-max-tokens');
-        if (modelEl) modelEl.value = data.model || 'gemini-2.5-flash-lite';
+        if (modelEl) {
+            modelEl.value = data.model || 'gemini-2.5-flash-lite';
+            // 同步自訂下拉 UI
+            syncCustomSelect(data.model || 'gemini-2.5-flash-lite');
+        }
         if (tempEl) {
             tempEl.value = data.temperature ?? 0.7;
             if (tempValEl) tempValEl.textContent = (data.temperature ?? 0.7).toFixed(2);
@@ -753,7 +757,10 @@ async function runAiTest() {
         // ✅ 直接使用主 fns 實例（已包含管理員 auth token），不需另建新 App
         const testFn = httpsCallable(fns, 'askGemini');
         const { data } = await testFn({ prompt: q, knowledge: '' });
-        if (outputEl) outputEl.textContent = data.text || '（無回應）';
+        if (outputEl) {
+            outputEl.textContent = data.text || '（無回應）';
+            outputEl.classList.add('has-response');
+        }
     } catch (err) {
         if (outputEl) outputEl.textContent = '❌ ' + (err.message || '呼叫失敗');
     } finally {
@@ -769,3 +776,73 @@ document.addEventListener('input', e => {
         if (el) el.textContent = val;
     }
 });
+
+// ───────────────────────────────────────────────────────────────
+// 自訂下拉選單（Custom Select）接管 #ai-model
+// ───────────────────────────────────────────────────────────────
+const CS_OPTIONS = [
+    { value: 'gemini-2.5-flash-lite', icon: '⚡', label: 'gemini-2.5-flash-lite', badge: '最快最省', badgeClass: 'fastest' },
+    { value: 'gemini-2.5-flash', icon: '🚀', label: 'gemini-2.5-flash', badge: '均衡推薦', badgeClass: 'balanced' },
+    { value: 'gemini-2.5-pro', icon: '💎', label: 'gemini-2.5-pro', badge: '最強效能', badgeClass: 'powerful' },
+];
+
+const csTrigger = document.getElementById('cs-model-trigger');
+const csDropdown = document.getElementById('cs-model-dropdown');
+const csOptions = csDropdown?.querySelectorAll('.cs-option');
+const nativeSelect = document.getElementById('ai-model');
+
+/** 更新觸發按鈕顯示 */
+function syncCustomSelect(value) {
+    const opt = CS_OPTIONS.find(o => o.value === value) || CS_OPTIONS[0];
+    if (!csTrigger) return;
+    csTrigger.querySelector('.cs-trigger-icon').textContent = opt.icon;
+    csTrigger.querySelector('.cs-trigger-label').textContent = opt.label;
+    const badge = csTrigger.querySelector('.cs-trigger-badge');
+    badge.textContent = opt.badge;
+    badge.className = `cs-trigger-badge ${opt.badgeClass}`;
+    // 更新選項的 selected class
+    csOptions?.forEach(el => {
+        el.classList.toggle('selected', el.dataset.value === value);
+    });
+    // 同步原生 select（供 saveAiSettings 讀取）
+    if (nativeSelect) nativeSelect.value = value;
+}
+
+/** 開關下拉 */
+function toggleDropdown(open) {
+    if (!csTrigger || !csDropdown) return;
+    csTrigger.classList.toggle('open', open);
+    csDropdown.classList.toggle('open', open);
+    csTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+if (csTrigger) {
+    csTrigger.addEventListener('click', e => {
+        e.stopPropagation();
+        const isOpen = csTrigger.classList.contains('open');
+        toggleDropdown(!isOpen);
+    });
+}
+
+// 選項點擊
+csOptions?.forEach(option => {
+    option.addEventListener('click', () => {
+        syncCustomSelect(option.dataset.value);
+        toggleDropdown(false);
+    });
+});
+
+// 點外部關閉
+document.addEventListener('click', e => {
+    if (!e.target.closest('#cs-model-wrapper')) {
+        toggleDropdown(false);
+    }
+});
+
+// 鍵盤支援（Escape 關閉）
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') toggleDropdown(false);
+});
+
+// 初始同步（頁面載入時用 native select 的預設值）
+syncCustomSelect(nativeSelect?.value || 'gemini-2.5-flash-lite');
