@@ -750,21 +750,8 @@ async function runAiTest() {
     if (outputEl) outputEl.textContent = '⏳ AI 回應中…';
     if (btnEl) btnEl.disabled = true;
     try {
-        // 引入前端的 askGemini callable（smes-e1dc3 project）
-        const { getFunctions: getFns2, httpsCallable: hc2 } = await import('firebase/functions');
-        const { initializeApp: initApp2, getApps } = await import('firebase/app');
-        const appName = 'test-preview';
-        let testApp = getApps().find(a => a.name === appName);
-        if (!testApp) {
-            testApp = initApp2({
-                apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-                authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-                projectId: 'smes-e1dc3',
-                appId: import.meta.env.VITE_FIREBASE_APP_ID,
-            }, appName);
-        }
-        const testFns = getFns2(testApp, 'asia-northeast1');
-        const testFn = hc2(testFns, 'askGemini');
+        // ✅ 直接使用主 fns 實例（已包含管理員 auth token），不需另建新 App
+        const testFn = httpsCallable(fns, 'askGemini');
         const { data } = await testFn({ prompt: q, knowledge: '' });
         if (outputEl) outputEl.textContent = data.text || '（無回應）';
     } catch (err) {
