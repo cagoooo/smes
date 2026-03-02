@@ -467,6 +467,8 @@ function showLoginScreen() {
     if (overlay) overlay.style.display = 'flex';
     const chat = document.getElementById('chat-main');
     if (chat) chat.style.display = 'none';
+    // 重設進度條（以防登出後重新登入）
+    loginProgress.reset();
 }
 
 function hideLoginScreen() {
@@ -475,6 +477,58 @@ function hideLoginScreen() {
     const chat = document.getElementById('chat-main');
     if (chat) chat.style.display = '';
 }
+
+// ── 登入進度條控制器 ──
+const loginProgress = {
+    _steps: 4,
+    setStep(n, statusText) {
+        // 更新每個步驟的狀態
+        for (let i = 0; i < this._steps; i++) {
+            const el = document.getElementById('step-' + i);
+            if (!el) continue;
+            el.classList.remove('step-active', 'step-done');
+            if (i < n) el.classList.add('step-done');
+            if (i === n) el.classList.add('step-active');
+        }
+        // 更新進度條寬度（25% per step, step 完成後到 100%）
+        const bar = document.getElementById('login-progress-bar');
+        if (bar) bar.style.width = (n >= this._steps ? 100 : Math.round((n / this._steps) * 100)) + '%';
+        // 更新狀態文字
+        const txt = document.getElementById('login-status-text');
+        if (txt && statusText) txt.textContent = statusText;
+    },
+    show() {
+        const btn = document.getElementById('google-login-btn');
+        if (btn) btn.style.display = 'none';
+        const note = document.getElementById('login-note');
+        if (note) note.style.opacity = '0';
+        const wrap = document.getElementById('login-progress-wrap');
+        if (wrap) wrap.style.display = 'block';
+    },
+    showSuccess() {
+        const wrap = document.getElementById('login-progress-wrap');
+        if (wrap) wrap.style.display = 'none';
+        const success = document.getElementById('login-success-wrap');
+        if (success) success.style.display = 'flex';
+    },
+    reset() {
+        const btn = document.getElementById('google-login-btn');
+        if (btn) { btn.style.display = ''; btn.disabled = false; }
+        const note = document.getElementById('login-note');
+        if (note) note.style.opacity = '1';
+        const wrap = document.getElementById('login-progress-wrap');
+        if (wrap) wrap.style.display = 'none';
+        const success = document.getElementById('login-success-wrap');
+        if (success) success.style.display = 'none';
+        // 清除所有步驟狀態
+        for (let i = 0; i < this._steps; i++) {
+            const el = document.getElementById('step-' + i);
+            if (el) el.classList.remove('step-active', 'step-done');
+        }
+        const bar = document.getElementById('login-progress-bar');
+        if (bar) bar.style.width = '0%';
+    }
+};
 
 // ── 更新 Navbar 使用者區塊 ──
 function updateNavbarUser(user) {
@@ -500,14 +554,19 @@ function updateNavbarUser(user) {
 
 // ── 全域函式：Google 登入 ──
 window.googleLogin = async function () {
-    const btn = document.getElementById('google-login-btn');
-    if (btn) { btn.disabled = true; btn.textContent = '登入中...'; }
+    // 顯示進度條，開始步驟 0
+    loginProgress.show();
+    loginProgress.setStep(0, '正在開啟 Google 登入視窗…');
+
     try {
-        await signInWithPopup(auth, provider);
-        // onAuthStateChanged 會自動觸發後續流程
+        // 步驟 0 → 開啟 popup
+        const credential = await signInWithPopup(auth, provider);
+        // popup 關閉後（驗證完成），進入步驟 1
+        loginProgress.setStep(1, '正在驗證 Google 帳號身份…');
+        // onAuthStateChanged 自動接手步驟 2、3
     } catch (err) {
         console.error('Google 登入失敗:', err);
-        if (btn) { btn.disabled = false; btn.textContent = '使用 Google 帳號登入'; }
+        loginProgress.reset();
         if (err.code !== 'auth/popup-closed-by-user') {
             alert('登入失敗，請再試一次。');
         }
@@ -539,18 +598,30 @@ window.googleLogout = async function () {
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        hideLoginScreen();
         updateNavbarUser(user);
-        // 載入該用戶的對話紀錄
+
+        // 步驟 2：載入對話記錄
+        loginProgress.setStep(2, '正在載入對話記錄…');
         const docRef = doc(db, 'chats', user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             conversations = docSnap.data().history || [];
-            updateChatUI();
         } else {
             conversations = [];
-            updateChatUI();
         }
+
+        // 步驟 3：準備完成
+        loginProgress.setStep(3, '準備完成，即將進入！');
+        await new Promise(r => setTimeout(r, 400));
+
+        // 進度條滿 → 顯示成功狀態
+        loginProgress.setStep(4, '');
+        loginProgress.showSuccess();
+        await new Promise(r => setTimeout(r, 700));
+
+        // 隱藏登入畫面，顯示聊天
+        hideLoginScreen();
+        updateChatUI();
     } else {
         currentUser = null;
         updateNavbarUser(null);

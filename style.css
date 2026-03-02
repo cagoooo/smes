@@ -122,7 +122,230 @@
   color: #9ca3af;
   margin-top: 16px;
   margin-bottom: 0;
+  transition: opacity 0.3s ease;
 }
+
+/* ── 登入進度條容器 ── */
+#login-progress-wrap {
+  margin-top: 20px;
+  animation: fade-slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── 步驟清單 ── */
+.login-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.login-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: rgba(238, 242, 255, 0.6);
+  border: 1.5px solid rgba(99, 102, 241, 0.1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ca3af;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-step.step-active {
+  color: #4f46e5;
+  background: rgba(238, 242, 255, 0.95);
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 3px 12px rgba(99, 102, 241, 0.18);
+  transform: translateX(4px);
+}
+
+.login-step.step-done {
+  color: #059669;
+  background: rgba(236, 253, 245, 0.9);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.login-step .step-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.login-step.step-active .step-icon {
+  animation: icon-pulse 1s ease-in-out infinite;
+}
+
+@keyframes icon-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+.login-step .step-label {
+  flex: 1;
+}
+
+.login-step .step-status {
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+/* 活躍步驟 spinner */
+.login-step.step-active .step-status::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(99, 102, 241, 0.25);
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  vertical-align: middle;
+}
+
+.login-step.step-done .step-status::before {
+  content: '✓';
+  color: #10b981;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── 進度條 ── */
+.login-progress-bar-bg {
+  height: 6px;
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.login-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #6366f1, #0ea5e9, #10b981);
+  background-size: 200% 100%;
+  border-radius: 99px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: shimmer-bar 2s linear infinite;
+}
+
+@keyframes shimmer-bar {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ── 狀態文字 ── */
+.login-status-text {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+  min-height: 18px;
+  transition: opacity 0.25s ease;
+}
+
+/* ── 成功狀態 ── */
+.login-success-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  animation: success-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes success-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.success-circle {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.45);
+  animation: success-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes success-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 8px 28px rgba(16, 185, 129, 0.45);
+  }
+
+  50% {
+    box-shadow: 0 12px 40px rgba(16, 185, 129, 0.7);
+  }
+}
+
+.success-checkmark {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: draw-check 0.5s 0.1s ease forwards;
+}
+
+@keyframes draw-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.success-text {
+  font-size: 14px;
+  font-weight: 800;
+  color: #059669;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
 
 @media (max-width: 480px) {
   .login-card {
