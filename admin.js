@@ -502,11 +502,12 @@ async function loadKnowledgeBase() {
     kbEditor.placeholder = '載入中…';
     kbStatus.textContent = '';
     try {
-        const res = await getKnowledgeBaseFn();
+        const getFn = httpsCallable(fns, 'getKnowledgeBase');
+        const res = await getFn();
         kbEditor.value = res.data.content || '';
         updateKbStats();
     } catch (e) {
-        kbStatus.textContent = '❌ 載入失敗：' + e.message;
+        kbStatus.textContent = '❌ 載入失敗：' + (e.message || e.code || 'INTERNAL');
     }
 }
 
@@ -522,7 +523,8 @@ kbEditor.addEventListener('input', () => {
 document.getElementById('kb-save-btn').addEventListener('click', async () => {
     kbStatus.textContent = '⏳ 儲存中…';
     try {
-        await updateKnowledgeBaseFn({ content: kbEditor.value });
+        const saveFn = httpsCallable(fns, 'updateKnowledgeBase');
+        await saveFn({ content: kbEditor.value });
         kbDirty = false;
         kbStatus.textContent = '✅ 已儲存！AI 將立即使用新版本。';
         kbStatus.style.color = '#34d399';
@@ -545,7 +547,8 @@ async function loadKnowledgeHistory() {
     if (!listEl) return;
     listEl.innerHTML = '<p style="color:var(--muted);padding:8px">載入中…</p>';
     try {
-        const res = await getKnowledgeHistoryFn();
+        const histFn = httpsCallable(fns, 'getKnowledgeHistory');
+        const res = await histFn();
         const versions = res.data.versions || [];
         if (versions.length === 0) {
             listEl.innerHTML = '<p style="color:var(--muted);padding:8px">尚無版本歷史</p>';
@@ -576,7 +579,8 @@ async function loadKnowledgeHistory() {
                         btn.disabled = true;
                         btn.textContent = '回復中…';
                         try {
-                            const r = await restoreKnowledgeVersionFn({ versionId: btn.dataset.vid });
+                            const restoreFn = httpsCallable(fns, 'restoreKnowledgeVersion');
+                            const r = await restoreFn({ versionId: btn.dataset.vid });
                             kbEditor.value = r.data.content || '';
                             updateKbStats();
                             kbDirty = false;
@@ -846,3 +850,63 @@ document.addEventListener('keydown', e => {
 
 // 初始同步（頁面載入時用 native select 的預設值）
 syncCustomSelect(nativeSelect?.value || 'gemini-2.5-flash-lite');
+
+// ── 知識庫：下載按鈕（動態插入）+ 頁面切換自動載入 ──────────────
+(function initKbExtras() {
+    // 插入下載按鈕
+    const actions = document.querySelector('.kb-actions');
+    if (actions && !document.getElementById('kb-download-btn')) {
+        const dlBtn = document.createElement('button');
+        dlBtn.className = 'btn-secondary';
+        dlBtn.id = 'kb-download-btn';
+        dlBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>下載 .txt';
+        dlBtn.addEventListener('click', () => {
+            const content = document.getElementById('kb-editor')?.value || '';
+            if (!content.trim()) { alert('知識庫內容為空，無法下載！'); return; }
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const date = new Date().toLocaleDateString('zh-TW').replace(/\//g, '-');
+            a.href = url; a.download = `knowledge_base_${date}.txt`;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+            const st = document.getElementById('kb-status');
+            if (st) { st.textContent = '⬇️ 已下載'; st.style.color = '#60a5fa'; setTimeout(() => { st.textContent = ''; }, 2500); }
+        });
+        actions.appendChild(dlBtn);
+    }
+    // 切換到知識庫頁面時自動載入
+    document.querySelectorAll('.nav-item[data-page="knowledge"]').forEach(item => {
+        item.addEventListener('click', () => setTimeout(loadKnowledgeBase, 100));
+    });
+})();
+
+
+// ── 登入進度條 ────────────────────────────────────────────────
+(function initLoginProgress() {
+    const loginBtn = document.getElementById('login-btn');
+    const loginBtnText = document.getElementById('login-btn-text');
+    const loginProgress = document.getElementById('login-progress');
+    const loginError = document.getElementById('login-error');
+    if (!loginBtn) return;
+
+    // 覆寫原先的登入按鈕點擊（在 admin.js 中已有 signInFn）
+    // 找到原本的 click listener，補充 UI 狀態
+    loginBtn.addEventListener('click', () => {
+        // 按下後立即顯示進度
+        loginBtn.disabled = true;
+        if (loginBtnText) loginBtnText.textContent = '登入中…';
+        if (loginProgress) loginProgress.style.display = 'block';
+        if (loginError) loginError.textContent = '';
+    }, true); // capture 讓此 listener 在其他 click handlers 前觸發
+
+    // 監聽登入失敗（若 login-error 有內容，則還原按鈕狀態）
+    const observer = new MutationObserver(() => {
+        if (loginError && loginError.textContent.trim()) {
+            loginBtn.disabled = false;
+            if (loginBtnText) loginBtnText.textContent = '使用 Google 帳號登入';
+            if (loginProgress) loginProgress.style.display = 'none';
+        }
+    });
+    if (loginError) observer.observe(loginError, { childList: true, subtree: true, characterData: true });
+})();
