@@ -17,9 +17,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <title>桃園市石門國小資訊組客服部</title>
-  <script type="module" crossorigin src="./assets/main-BJl42UKY.js"></script>
+  <script type="module" crossorigin src="./assets/main-D1KhgdQG.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/index.esm2017-CsNV0MYh.js">
-  <link rel="stylesheet" crossorigin href="./assets/main-DM6nqm1o.css">
+  <link rel="stylesheet" crossorigin href="./assets/main-C7JeEKoz.css">
 </head>
 
 <body>
@@ -62,7 +62,52 @@
                     </svg>
                     使用 Google 帳號登入
                 </button>
-                <p class="login-note">* 登入資訊僅用於儲存您的對話紀錄</p>
+
+                <!-- ═══ 登入進度區（預設隱藏） ═══ -->
+                <div id="login-progress-wrap" style="display:none;">
+                    <!-- 步驟清單 -->
+                    <div class="login-steps" id="login-steps">
+                        <div class="login-step" id="step-0">
+                            <span class="step-icon">🔑</span>
+                            <span class="step-label">開啟 Google 登入視窗</span>
+                            <span class="step-status"></span>
+                        </div>
+                        <div class="login-step" id="step-1">
+                            <span class="step-icon">🛡️</span>
+                            <span class="step-label">驗證 Google 帳號身份</span>
+                            <span class="step-status"></span>
+                        </div>
+                        <div class="login-step" id="step-2">
+                            <span class="step-icon">💾</span>
+                            <span class="step-label">載入您的對話記錄</span>
+                            <span class="step-status"></span>
+                        </div>
+                        <div class="login-step" id="step-3">
+                            <span class="step-icon">🚀</span>
+                            <span class="step-label">準備完成，即將進入</span>
+                            <span class="step-status"></span>
+                        </div>
+                    </div>
+                    <!-- 進度條 -->
+                    <div class="login-progress-bar-bg">
+                        <div class="login-progress-bar" id="login-progress-bar"></div>
+                    </div>
+                    <!-- 狀態文字 -->
+                    <p class="login-status-text" id="login-status-text">正在連線至 Google…</p>
+                </div>
+
+                <!-- 成功狀態（預設隱藏） -->
+                <div id="login-success-wrap" style="display:none;" class="login-success-wrap">
+                    <div class="success-circle">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 13l4 4L19 7" stroke="white" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round" class="success-checkmark" />
+                        </svg>
+                    </div>
+                    <p class="success-text">登入成功！正在載入…</p>
+                </div>
+
+                <p class="login-note" id="login-note">* 登入資訊僅用於儲存您的對話紀錄</p>
             </div>
         </div>
     </div>
