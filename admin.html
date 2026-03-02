@@ -1620,108 +1620,387 @@
         }
 
         .ai-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px 22px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 18px;
+            padding: 22px 24px;
+            transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+        }
+
+        .ai-card:hover {
+            border-color: rgba(167, 139, 250, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
         }
 
         .ai-card h3 {
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            margin-bottom: 5px;
+            color: #e2e8f0;
         }
 
         .ai-card.full {
             grid-column: 1 / -1;
         }
 
+        /* 隱藏原生 select，改用自訂下拉 */
         .ai-select {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text);
-            padding: 10px 14px;
-            font-size: 13px;
-            margin-top: 10px;
-            cursor: pointer;
+            display: none;
         }
 
-        .ai-slider-row {
+        /* ══ 自訂下拉選單 (Custom Select) ══ */
+        .cs-wrapper {
+            position: relative;
+            margin-top: 12px;
+            user-select: none;
+        }
+
+        .cs-trigger {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-top: 10px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text);
+            font-family: 'Noto Sans TC', sans-serif;
+            font-weight: 600;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
         }
 
-        .ai-slider-row input[type='range'] {
+        .cs-trigger:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(167, 139, 250, 0.5);
+        }
+
+        .cs-trigger.open {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+            background: rgba(167, 139, 250, 0.08);
+        }
+
+        .cs-trigger-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .cs-trigger-label {
             flex: 1;
-            accent-color: var(--accent);
+            text-align: left;
+        }
+
+        .cs-trigger-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 50px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .cs-trigger-badge.fastest {
+            background: rgba(52, 211, 153, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+
+        .cs-trigger-badge.balanced {
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .cs-trigger-badge.powerful {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fcd34d;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .cs-arrow {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: var(--muted);
+            stroke-width: 2.5;
+            flex-shrink: 0;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.2s;
+        }
+
+        .cs-trigger.open .cs-arrow {
+            transform: rotate(180deg);
+            stroke: #a78bfa;
+        }
+
+        .cs-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: rgba(18, 12, 36, 0.98);
+            border: 1.5px solid rgba(167, 139, 250, 0.3);
+            border-radius: 14px;
+            padding: 6px;
+            z-index: 500;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(24px);
+            opacity: 0;
+            transform: translateY(-8px) scale(0.98);
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .cs-dropdown.open {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .cs-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s;
+            position: relative;
+        }
+
+        .cs-option:hover {
+            background: rgba(167, 139, 250, 0.12);
+        }
+
+        .cs-option.selected {
+            background: rgba(167, 139, 250, 0.18);
+        }
+
+        .cs-option.selected::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 20%;
+            height: 60%;
+            width: 3px;
+            border-radius: 2px;
+            background: linear-gradient(180deg, #a78bfa, #7c3aed);
+        }
+
+        .cs-opt-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            width: 32px;
+            text-align: center;
+        }
+
+        .cs-opt-body {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .cs-opt-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cs-opt-desc {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .cs-opt-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 50px;
+            white-space: nowrap;
+        }
+
+        .cs-opt-badge.fastest {
+            background: rgba(52, 211, 153, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+
+        .cs-opt-badge.balanced {
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .cs-opt-badge.powerful {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fcd34d;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        /* ══ 滑桿美化 ══ */
+        .ai-slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
         }
 
         .ai-label {
             font-size: 11px;
             color: var(--muted);
             white-space: nowrap;
+            min-width: 44px;
+        }
+
+        input[type='range']#ai-temp {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 99px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type='range']#ai-temp::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a78bfa, #7c3aed);
+            box-shadow: 0 0 8px rgba(167, 139, 250, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        input[type='range']#ai-temp::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 16px rgba(167, 139, 250, 0.8), 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        input[type='range']#ai-temp::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a78bfa, #7c3aed);
+            box-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
+            cursor: pointer;
         }
 
         .ai-temp-display {
-            margin-top: 8px;
+            margin-top: 12px;
             font-size: 13px;
             color: var(--muted);
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
         }
 
         .ai-temp-display strong {
             color: #a78bfa;
-            font-size: 18px;
+            font-size: 26px;
+            font-weight: 900;
+            line-height: 1;
+            text-shadow: 0 0 20px rgba(167, 139, 250, 0.5);
         }
 
+        /* ══ 數字輸入升級 ══ */
         .ai-number-input {
-            width: 140px;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid var(--border);
-            border-radius: 10px;
+            width: 160px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
             color: var(--text);
-            padding: 10px 14px;
-            font-size: 15px;
-            margin-top: 10px;
+            padding: 12px 16px;
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 0;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: 'Noto Sans TC', sans-serif;
         }
 
+        .ai-number-input:focus {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+        }
+
+        /* ══ 即時測試卡片升級 ══ */
         .ai-test-card {
-            border-color: rgba(14, 165, 233, 0.3);
+            position: relative;
+            background: linear-gradient(145deg, rgba(14, 165, 233, 0.06) 0%, rgba(99, 102, 241, 0.06) 100%) !important;
+            border: 1.5px solid rgba(14, 165, 233, 0.2) !important;
+            overflow: hidden;
+        }
+
+        .ai-test-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at top right, rgba(14, 165, 233, 0.06) 0%, transparent 70%);
+            pointer-events: none;
         }
 
         .ai-test-card h3 {
-            color: #7dd3fc;
+            color: #7dd3fc !important;
         }
 
         .ai-test-row {
             display: flex;
             gap: 10px;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
         }
 
         .ai-test-row input {
             flex: 1;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid var(--border);
-            border-radius: 10px;
+            min-width: 180px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
             color: var(--text);
-            padding: 10px 14px;
-            font-size: 13px;
+            padding: 12px 16px;
+            font-size: 14px;
+            outline: none;
+            font-family: 'Noto Sans TC', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .ai-test-row input::placeholder {
+            color: rgba(148, 163, 184, 0.5);
+        }
+
+        .ai-test-row input:focus {
+            border-color: rgba(14, 165, 233, 0.6);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
         }
 
         .ai-test-output {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            padding: 14px;
-            font-size: 13px;
-            color: var(--muted);
-            min-height: 60px;
-            line-height: 1.8;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 12px;
+            padding: 16px 18px;
+            font-size: 13.5px;
+            color: #94a3b8;
+            min-height: 80px;
+            line-height: 1.9;
             white-space: pre-wrap;
+            word-break: break-word;
+            transition: color 0.3s, border-color 0.3s;
+        }
+
+        .ai-test-output.has-response {
+            color: #e2e8f0;
+            border-color: rgba(52, 211, 153, 0.2);
         }
 
         .ai-save-row {
@@ -1731,10 +2010,44 @@
             margin-top: 4px;
             flex-wrap: wrap;
         }
+
+        /* ══ AI 設定 RWD ══ */
+        @media (max-width: 640px) {
+            .ai-card {
+                padding: 16px 18px;
+            }
+
+            .ai-card.full {
+                grid-column: auto;
+            }
+
+            .ai-test-row {
+                flex-direction: column;
+            }
+
+            .ai-test-row input {
+                min-width: 0;
+                width: 100%;
+            }
+
+            .cs-trigger {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+
+            .cs-opt-desc {
+                display: none;
+            }
+
+            .ai-number-input {
+                width: 120px;
+                font-size: 16px;
+            }
+        }
     </style>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <script type="module" crossorigin src="./assets/admin-nfhNIptg.js"></script>
+  <script type="module" crossorigin src="./assets/admin-fWPGWUsj.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/index.esm2017-DIg91vv7.js">
 </head>
 
@@ -1920,6 +2233,44 @@
                         <option value="gemini-2.5-flash">🚀 gemini-2.5-flash（均衡型）</option>
                         <option value="gemini-2.5-pro">💎 gemini-2.5-pro（最強，較慢）</option>
                     </select>
+                    <!-- 自訂下拉選單 -->
+                    <div class="cs-wrapper" id="cs-model-wrapper">
+                        <button class="cs-trigger" id="cs-model-trigger" type="button" aria-haspopup="listbox"
+                            aria-expanded="false">
+                            <span class="cs-trigger-icon">⚡</span>
+                            <span class="cs-trigger-label">gemini-2.5-flash-lite</span>
+                            <span class="cs-trigger-badge fastest">最快最省</span>
+                            <svg class="cs-arrow" viewBox="0 0 24 24">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
+                        <div class="cs-dropdown" id="cs-model-dropdown" role="listbox">
+                            <div class="cs-option selected" data-value="gemini-2.5-flash-lite" role="option">
+                                <span class="cs-opt-icon">⚡</span>
+                                <div class="cs-opt-body">
+                                    <div class="cs-opt-name">gemini-2.5-flash-lite</div>
+                                    <div class="cs-opt-desc">速度最快、成本最低，適合日常問答</div>
+                                </div>
+                                <span class="cs-opt-badge fastest">最快最省</span>
+                            </div>
+                            <div class="cs-option" data-value="gemini-2.5-flash" role="option">
+                                <span class="cs-opt-icon">🚀</span>
+                                <div class="cs-opt-body">
+                                    <div class="cs-opt-name">gemini-2.5-flash</div>
+                                    <div class="cs-opt-desc">速度與品質均衡，適合複雜問題</div>
+                                </div>
+                                <span class="cs-opt-badge balanced">均衡推薦</span>
+                            </div>
+                            <div class="cs-option" data-value="gemini-2.5-pro" role="option">
+                                <span class="cs-opt-icon">💎</span>
+                                <div class="cs-opt-body">
+                                    <div class="cs-opt-name">gemini-2.5-pro</div>
+                                    <div class="cs-opt-desc">最高品質推理，速度較慢、成本較高</div>
+                                </div>
+                                <span class="cs-opt-badge powerful">最強效能</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <!-- Temperature -->
                 <div class="ai-card">
