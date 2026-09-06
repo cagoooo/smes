@@ -2,6 +2,8 @@
 
 🌐 **線上使用：[PIRLS閱讀理解網](https://cagoooo.github.io/smes/)**
 
+> 📌 **目前版本：v3.3.0**（依據 `CHANGELOG.md`）
+
 教育專業客服
 
 <!-- BEGIN:PROJECT_GUIDE -->
