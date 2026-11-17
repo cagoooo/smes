@@ -1,7 +1,7 @@
 // ── Service Worker v2 — 石門小智鈴 PWA ──────────────────────────────────────
 // 同一網域（cagoooo.github.io）的所有工具共用快取空間，只能清除自己這個前綴的快取
 const CACHE_PREFIX = 'smes-cache-';
-const CACHE_NAME = CACHE_PREFIX + 'v3';
+const CACHE_NAME = CACHE_PREFIX + 'v4';
 const OFFLINE_URL = '/index.html';
 const QUEUE_STORE = 'offline-queue';
 
