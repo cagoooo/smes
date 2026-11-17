@@ -1,5 +1,7 @@
 // ── Service Worker v2 — 石門小智鈴 PWA ──────────────────────────────────────
-const CACHE_NAME = 'smes-cache-v3';
+// 同一網域（cagoooo.github.io）的所有工具共用快取空間，只能清除自己這個前綴的快取
+const CACHE_PREFIX = 'smes-cache-';
+const CACHE_NAME = CACHE_PREFIX + 'v3';
 const OFFLINE_URL = '/index.html';
 const QUEUE_STORE = 'offline-queue';
 
@@ -28,7 +30,7 @@ self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(keys =>
             Promise.all(keys
-                .filter(k => k !== CACHE_NAME)
+                .filter(k => k.startsWith(CACHE_PREFIX) && k !== CACHE_NAME)
                 .map(k => caches.delete(k))
             )
         ).then(() => self.clients.claim())
