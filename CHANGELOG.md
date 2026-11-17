@@ -1,6 +1,11 @@
 # 📋 CHANGELOG — 石門小智鈴 AI 客服
 
 ---
+## v3.3.2 — 2026-11-17｜離線快取不再誤刪其他工具
+
+- Service Worker 清除舊快取時只刪 `smes-cache-` 開頭的自己的快取；先前會把同網域（cagoooo.github.io）其他工具的離線快取一起刪掉
+
+---
 ## v3.3.1 — 2026-11-17｜頁尾署名更新
 
 - 頁尾署名改連阿凱老師教育科技創新專區（升版讓離線快取更新）：Service Worker 快取 `smes-cache-v2` → `smes-cache-v3`
