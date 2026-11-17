@@ -1,5 +1,5 @@
 // ── Service Worker v2 — 石門小智鈴 PWA ──────────────────────────────────────
-const CACHE_NAME = 'smes-cache-v2';
+const CACHE_NAME = 'smes-cache-v3';
 const OFFLINE_URL = '/index.html';
 const QUEUE_STORE = 'offline-queue';
 
