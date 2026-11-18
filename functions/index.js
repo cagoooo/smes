@@ -13,6 +13,8 @@ const db = admin.firestore();
 const lineChannelAccessToken = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 const lineUserId = defineSecret('LINE_USER_ID');
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
+// Google Chat incoming webhook（免費、無則數上限）：一般事件只發 Chat，LINE 只留給重要告警
+const googleChatWebhook = defineSecret('GOOGLE_CHAT_WEBHOOK_URL');
 
 // 部署至亞太區域
 setGlobalOptions({ region: 'asia-northeast1' });
@@ -42,7 +44,7 @@ async function checkAdmin(request) {
 
 // ─── askGemini：前端 Callable，安全呼叫 Gemini API ───────────────────────────
 exports.askGemini = onCall(
-    { secrets: [geminiApiKey, lineChannelAccessToken, lineUserId], region: 'asia-northeast1', enforceAppCheck: false },
+    { secrets: [geminiApiKey, lineChannelAccessToken, lineUserId, googleChatWebhook], region: 'asia-northeast1', enforceAppCheck: false },
     async (request) => {
         if (!request.auth) {
             throw new HttpsError('unauthenticated', '請先登入才能使用 AI 客服。');
@@ -118,6 +120,17 @@ exports.askGemini = onCall(
                     kw && safePrompt.toLowerCase().includes(kw.toLowerCase())
                 );
                 if (matched.length > 0) {
+                    // 敏感關鍵字屬重要告警：Google Chat 與 LINE 都通知（Chat 先發，LINE 額度用完也不影響）
+                    await sendGoogleChatCard({
+                        icon: '⚠️',
+                        title: '關鍵字告警',
+                        fields: [
+                            { label: '時間', value: formatTaipeiTime() },
+                            { label: '命中關鍵字', value: cleanSnippet(matched.join('、'), 60) },
+                            { label: '對話摘要', value: cleanSnippet(safePrompt, 30) || '（無內容）' },
+                            { label: '來源', value: '石門小智鈴 AI 客服網頁' },
+                        ],
+                    });
                     const token = lineChannelAccessToken.value().trim();
                     const userId = lineUserId.value().trim();
                     if (token && userId) {
@@ -151,7 +164,7 @@ exports.askGemini = onCall(
                     }
                 }
             } catch (alertErr) {
-                console.error('告警推送失敗（不影響主要流程）:', alertErr.message);
+                console.error('告警推送失敗（不影響主要流程）:', alertErr.response?.status || '', alertErr.message);
             }
 
             return { text, usedCount: usedCount + 1, dailyLimit: DAILY_LIMIT };
@@ -360,12 +373,93 @@ function stripMarkdown(text) {
         .trim();
 }
 
+// ─── Google Chat 通知（2026-11-18 起）────────────────────────────────────────
+// 多個網站共用同一個 LINE 官方帳號（免費方案每月 200 則），
+// 新對話這類一般事件只發 Google Chat；LINE 只留給敏感關鍵字等重要告警。
+const CHAT_APP_NAME = '石門小智鈴';
+
+function formatTaipeiTime(value) {
+    const d = value ? new Date(value) : new Date();
+    const date = isNaN(d.getTime()) ? new Date() : d;
+    return new Intl.DateTimeFormat('zh-TW', {
+        timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(date);
+}
+
+// 取前 n 個字當摘要：去掉 Markdown／HTML、控制字元、零寬字元、亂碼替代字元與私用區字元
+function cleanSnippet(text, n = 30) {
+    const plain = stripMarkdown(String(text || ''))
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
+        .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\uFFFD\uE000-\uF8FF]/g, '')
+        .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    const chars = Array.from(plain);
+    return chars.length > n ? chars.slice(0, n).join('') + '…' : plain;
+}
+
+function escapeChatHtml(text) {
+    return String(text).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+
+/**
+ * 發 Google Chat 卡片（cardsV2）。Best-effort：失敗只記 log，不丟錯、不影響主流程。
+ * 使用的函式要在 secrets 掛上 googleChatWebhook。
+ */
+async function sendGoogleChatCard({ icon, title, fields, buttons }) {
+    const url = (googleChatWebhook.value() || '').trim();
+    if (!url || url === 'DISABLED' || url === 'PLACEHOLDER_NOT_CONFIGURED') {
+        console.warn('[notify-gchat] 未設定 GOOGLE_CHAT_WEBHOOK_URL，略過');
+        return;
+    }
+    const widgets = fields.map((f) => ({
+        decoratedText: { topLabel: f.label, text: escapeChatHtml(f.value || '—'), wrapText: true },
+    }));
+    if (buttons?.length) {
+        widgets.push({
+            buttonList: {
+                buttons: buttons.map((b) => ({ text: b.label, onClick: { openLink: { url: b.url } } })),
+            },
+        });
+    }
+    const payload = {
+        // 手機推播只看得到這行，所以表情符號後先放【平台名】
+        text: `${icon} 【${CHAT_APP_NAME}】${title}（${fields.map((f) => `${f.label}: ${f.value}`).join('，')}）`,
+        cardsV2: [{
+            cardId: 'smes-' + Date.now(),
+            card: {
+                header: {
+                    title: `${icon} ${title}｜${CHAT_APP_NAME}`,
+                    subtitle: '石門國小資訊組 AI 客服',
+                    imageUrl: icon === '⚠️'
+                        ? 'https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/warning/default/24px.svg'
+                        : 'https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/chat/default/24px.svg',
+                    imageType: 'CIRCLE',
+                },
+                sections: [{ widgets }],
+            },
+        }],
+    };
+    try {
+        await axios.post(url, payload, {
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            timeout: 10000,
+        });
+        console.log(`✅ Google Chat 通知發送成功：${title}`);
+    } catch (err) {
+        console.warn('[notify-gchat] 發送失敗', err.response?.status || '', JSON.stringify(err.response?.data || err.message).slice(0, 300));
+    }
+}
+
 /**
  * 監聽 chats/{uid} 文件更新
- * 偵測到 history 陣列新增時，透過 LINE Messaging API 以 Flex Message 通知管理員
+ * 偵測到有新的一則對話時，發 Google Chat 卡片通知管理員（不推 LINE）。
+ * 卡片只放時間、提問前 30 字摘要與來源，不放完整對話內容與使用者個資。
+ * （函式名稱沿用 notifyLineOnNewChat，避免改名造成刪除／重建）
  */
 exports.notifyLineOnNewChat = onDocumentUpdated(
-    { document: 'chats/{uid}', secrets: [lineChannelAccessToken, lineUserId] },
+    { document: 'chats/{uid}', secrets: [googleChatWebhook] },
     async (event) => {
         const before = event.data.before.data();
         const after = event.data.after.data();
@@ -375,123 +469,31 @@ exports.notifyLineOnNewChat = onDocumentUpdated(
 
         console.log(`觸發：舊 history 長度=${oldHistory.length}，新 history 長度=${newHistory.length}`);
 
-        if (newHistory.length <= oldHistory.length) {
+        const latest = newHistory[newHistory.length - 1];
+        if (!latest) {
+            console.log('沒有對話（可能是清除紀錄），略過。');
+            return null;
+        }
+
+        // 前端只保留最近 20 則，滿 20 則後長度不再增加；改用「最後一則的時間是不是新的」判斷，
+        // 管理員刪除某一則時最後一則一定是舊的，不會誤發。
+        const oldTimes = new Set(oldHistory.map((h) => h && h.time).filter(Boolean));
+        const isNew = latest.time ? !oldTimes.has(latest.time) : newHistory.length > oldHistory.length;
+        if (!isNew) {
             console.log('無新增訊息，略過通知。');
             return null;
         }
 
-        const latest = newHistory[newHistory.length - 1];
-        if (!latest) {
-            console.log('latest 為 null，略過。');
-            return null;
-        }
-
-        const token = lineChannelAccessToken.value().trim();
-        const userId = lineUserId.value().trim();
-
-        if (!token || !userId) {
-            console.error('缺少 LINE_CHANNEL_ACCESS_TOKEN 或 LINE_USER_ID');
-            return null;
-        }
-
-        // ── 資料整理 ──
-        const userName = String(latest.userName || after?.userName || '訪客').substring(0, 40);
-        const userEmail = String(latest.userEmail || after?.userEmail || '').substring(0, 50);
-        const question = String(latest.user || '（無問題內容）').substring(0, 150);
-        const plainAns = stripMarkdown(String(latest.ai || '（無回答內容）'));
-        const answer = plainAns.length > 180 ? plainAns.substring(0, 180) + '...' : plainAns;
-        const time = latest.time
-            ? new Date(latest.time).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
-            : new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
-
-        const userInfo = userEmail ? `${userName}\n${userEmail}` : userName;
-
-        console.log(`準備發送 LINE 通知：user=${userName}, question=${question.substring(0, 30)}...`);
-
-        // ── LINE Flex Message 卡片 ──
-        const flexMessage = {
-            type: 'flex',
-            altText: `🔔 石門小智鈴：${userName} 有新提問`,
-            contents: {
-                type: 'bubble',
-                size: 'giga',
-                header: {
-                    type: 'box', layout: 'vertical', paddingAll: '16px',
-                    backgroundColor: '#4F46E5',
-                    contents: [
-                        {
-                            type: 'box', layout: 'horizontal',
-                            contents: [
-                                { type: 'text', text: '🔔 石門小智鈴 AI 客服', color: '#FFFFFF', size: 'md', weight: 'bold', flex: 1 },
-                                { type: 'text', text: '新動態', color: '#A5B4FC', size: 'sm', align: 'end', flex: 0 }
-                            ]
-                        },
-                        { type: 'text', text: `⏰ ${time}`, color: '#C7D2FE', size: 'xs', margin: 'sm' }
-                    ]
-                },
-                body: {
-                    type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '16px',
-                    contents: [
-                        {
-                            type: 'box', layout: 'horizontal', backgroundColor: '#EEF2FF',
-                            cornerRadius: '10px', paddingAll: '10px',
-                            contents: [
-                                { type: 'text', text: '👤', size: 'xl', flex: 0, gravity: 'center' },
-                                { type: 'text', text: userInfo, size: 'sm', weight: 'bold', color: '#4338CA', flex: 1, wrap: true, margin: 'md' }
-                            ]
-                        },
-                        { type: 'separator', margin: 'sm' },
-                        {
-                            type: 'box', layout: 'vertical', spacing: 'xs',
-                            contents: [
-                                { type: 'text', text: '💬 提問內容', size: 'xs', color: '#6B7280', weight: 'bold' },
-                                { type: 'text', text: question, size: 'sm', color: '#111827', wrap: true, weight: 'bold' }
-                            ]
-                        },
-                        { type: 'separator', margin: 'sm' },
-                        {
-                            type: 'box', layout: 'vertical', spacing: 'xs',
-                            backgroundColor: '#F0FDF4', cornerRadius: '8px', paddingAll: '10px',
-                            contents: [
-                                { type: 'text', text: '🤖 AI 回答摘要', size: 'xs', color: '#059669', weight: 'bold' },
-                                { type: 'text', text: answer, size: 'sm', color: '#374151', wrap: true }
-                            ]
-                        }
-                    ]
-                },
-                footer: {
-                    type: 'box', layout: 'horizontal', paddingAll: '12px', spacing: 'sm',
-                    contents: [
-                        {
-                            type: 'button', style: 'primary', color: '#4F46E5', height: 'sm', flex: 1,
-                            action: { type: 'uri', label: '🖥️ 查看系統', uri: 'https://cagoooo.github.io/smes/' }
-                        },
-                        {
-                            type: 'button', style: 'secondary', height: 'sm', flex: 1,
-                            action: { type: 'uri', label: '📊 Firebase Console', uri: 'https://console.firebase.google.com/project/smes-e1dc3/firestore' }
-                        }
-                    ]
-                }
-            }
-        };
-
-        try {
-            const res = await axios.post(
-                'https://api.line.me/v2/bot/message/push',
-                { to: userId, messages: [flexMessage] },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-            console.log(`✅ LINE Flex 通知發送成功 uid:${event.params.uid} user:${userName} status:${res.status}`);
-        } catch (err) {
-            const errData = err.response?.data;
-            const errStatus = err.response?.status;
-            console.error(`❌ LINE 通知發送失敗 status:${errStatus}`, JSON.stringify(errData || err.message));
-        }
+        await sendGoogleChatCard({
+            icon: '🔔',
+            title: '有新提問',
+            fields: [
+                { label: '時間', value: formatTaipeiTime(latest.time) },
+                { label: '對話摘要', value: cleanSnippet(latest.user, 30) || '（無內容）' },
+                { label: '來源', value: '石門小智鈴 AI 客服網頁' },
+            ],
+            buttons: [{ label: '查看系統', url: 'https://cagoooo.github.io/smes/' }],
+        });
 
         return null;
     }
