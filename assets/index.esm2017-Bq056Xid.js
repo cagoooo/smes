@@ -238,7 +238,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */class Sr{constructor(e){this.container=e}getPlatformInfoString(){return this.container.getProviders().map(t=>{if(Ar(t)){const r=t.getImmediate();return`${r.library}/${r.version}`}else return null}).filter(t=>t).join(" ")}}function Ar(n){const e=n.getComponent();return(e==null?void 0:e.type)==="VERSION"}const Me="@firebase/app",pt="0.10.12";/**
+ */class Sr{constructor(e){this.container=e}getPlatformInfoString(){return this.container.getProviders().map(t=>{if(Ar(t)){const r=t.getImmediate();return`${r.library}/${r.version}`}else return null}).filter(t=>t).join(" ")}}function Ar(n){const e=n.getComponent();return(e==null?void 0:e.type)==="VERSION"}const Me="@firebase/app",pt="0.10.13";/**
  * @license
  * Copyright 2019 Google LLC
  *
@@ -253,7 +253,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */const S=new zt("@firebase/app"),kr="@firebase/app-compat",Cr="@firebase/analytics-compat",Or="@firebase/analytics",Rr="@firebase/app-check-compat",Pr="@firebase/app-check",Nr="@firebase/auth",Dr="@firebase/auth-compat",Lr="@firebase/database",Mr="@firebase/data-connect",Ur="@firebase/database-compat",xr="@firebase/functions",Fr="@firebase/functions-compat",Br="@firebase/installations",$r="@firebase/installations-compat",Hr="@firebase/messaging",Vr="@firebase/messaging-compat",jr="@firebase/performance",Wr="@firebase/performance-compat",zr="@firebase/remote-config",Gr="@firebase/remote-config-compat",qr="@firebase/storage",Kr="@firebase/storage-compat",Jr="@firebase/firestore",Yr="@firebase/vertexai-preview",Xr="@firebase/firestore-compat",Qr="firebase",Zr="10.14.0";/**
+ */const S=new zt("@firebase/app"),kr="@firebase/app-compat",Cr="@firebase/analytics-compat",Or="@firebase/analytics",Rr="@firebase/app-check-compat",Pr="@firebase/app-check",Nr="@firebase/auth",Dr="@firebase/auth-compat",Lr="@firebase/database",Mr="@firebase/data-connect",Ur="@firebase/database-compat",xr="@firebase/functions",Fr="@firebase/functions-compat",Br="@firebase/installations",$r="@firebase/installations-compat",Hr="@firebase/messaging",Vr="@firebase/messaging-compat",jr="@firebase/performance",Wr="@firebase/performance-compat",zr="@firebase/remote-config",Gr="@firebase/remote-config-compat",qr="@firebase/storage",Kr="@firebase/storage-compat",Jr="@firebase/firestore",Yr="@firebase/vertexai-preview",Xr="@firebase/firestore-compat",Qr="firebase",Zr="10.14.1";/**
  * @license
  * Copyright 2019 Google LLC
  *
@@ -373,7 +373,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */function fi(n){G(new B("platform-logger",e=>new Sr(e),"PRIVATE")),G(new B("heartbeat",e=>new ui(e),"PRIVATE")),M(Me,pt,n),M(Me,pt,"esm2017"),M("fire-js","")}fi("");var pi="firebase",gi="10.14.0";/**
+ */function fi(n){G(new B("platform-logger",e=>new Sr(e),"PRIVATE")),G(new B("heartbeat",e=>new ui(e),"PRIVATE")),M(Me,pt,n),M(Me,pt,"esm2017"),M("fire-js","")}fi("");var pi="firebase",gi="10.14.1";/**
  * @license
  * Copyright 2020 Google LLC
  *
